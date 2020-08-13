@@ -2,6 +2,7 @@ package main;
 
 public class GetSootArgs {
 	public String[] get(String[] args) {
+		// correct one
 		/*
 		 * args[0] -> java install path (for rt.jar and jce.jar)
 		 * args[1] -> whether benchmark or not
@@ -9,6 +10,8 @@ public class GetSootArgs {
 		 * args[3] -> main class
 		 * args[4] -> output directory
 		 */
+		
+		// ignore this
 		/*
 		 * args[0] -> class path 
 		 * args[1] -> directory to be processed/analysed
@@ -38,7 +41,7 @@ public class GetSootArgs {
 		if(args[3].contains("Harness")) {
 			// the benchmark is dacapo
 			String dir = new String(args[2]+"/out");
-			String refl_log = new String(dir+"/refl.log");
+			String refl_log = new String("reflection-log:"+dir+"/refl.log");
 			String cp = new String(args[0]+"/jre/lib/rt.jar:"+args[0]+"/jre/lib/jce.jar:"+dir+":"+args[2]+"/dacapo-9.12-MR1-bach.jar");
 			String[] sootArgs = {
 					// "-whole-program",

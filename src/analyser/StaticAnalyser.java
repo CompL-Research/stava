@@ -92,7 +92,7 @@ public class StaticAnalyser extends BodyTransformer {
 			/*
 			 * Swap workList and workListNext
 			 */
-			if(body.getMethod().toString().contains("visitMaxs")) System.out.println("[Loop:"+i+"]:"+printList(workListNext));
+//			if(body.getMethod().toString().contains("visitMaxs")) System.out.println("[Loop:"+i+"]:"+printList(workListNext));
 			temp = workList; workList = workListNext; workListNext = temp;
 			workListNext.clear();
 			
@@ -131,8 +131,8 @@ public class StaticAnalyser extends BodyTransformer {
 					inNew.union(flowSets.get(pred).getOut());
 				}
 				if(i>75 && body.getMethod().toString().contains("visitMaxs")) {
-					System.out.println("[BCI:"+getBCI.get(u)+", unit:"+u.toString()+"]" );
-					System.out.println("InNew:"+inNew.toString());
+//					System.out.println("[BCI:"+getBCI.get(u)+", unit:"+u.toString()+"]" );
+//					System.out.println("InNew:"+inNew.toString());
 				}
 //				if(bci == 135) {
 //					System.out.println("[BCI 135]");
@@ -172,11 +172,11 @@ public class StaticAnalyser extends BodyTransformer {
 				 * 		out[u] = outNew
 				 */
 				if(!outNew.equals(flowSet.getOut())) {
-					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutNew is new:"+outNew.toString());
+//					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutNew is new:"+outNew.toString());
 					workListNext.addAll(cfg.getSuccsOf(u));
 					flowSet.setOut(outNew);
 				} else {
-					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutOld (remains same):"+flowSet.getOut().toString());
+//					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutOld (remains same):"+flowSet.getOut().toString());
 				}
 			}
 			i+=1;
