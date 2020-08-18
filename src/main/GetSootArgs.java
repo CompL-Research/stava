@@ -10,42 +10,37 @@ public class GetSootArgs {
 		 * args[3] -> main class
 		 * args[4] -> output directory
 		 */
-		
-		// ignore this
-		/*
-		 * args[0] -> class path 
-		 * args[1] -> directory to be processed/analysed
-		 * args[2] -> main class
-		 * args[3] -> sootoutput directory
-		 */
-		
-//		String classpath = ".:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/rt.jar:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/jce.jar";
-
-		/*
-		String[] sootArgs = {
-//				"-whole-program",
-				"-coffi",
-				"-app",
-				"-allow-phantom-refs",
-				"-keep-bytecode-offset",
-				"-keep-offset",
-				"-soot-classpath", args[0], "-prepend-classpath",
-				"-keep-line-number",
-				"-process-dir", args[1],
-				"-main-class", args[2],
-				"-output-dir", args[3],
-				"-output-format", "jimple"
-			};
-		*/
-		
-		if(args[3].contains("Harness")) {
-			// the benchmark is dacapo
-			String dir = new String(args[2]+"/out");
-			String refl_log = new String("reflection-log:"+dir+"/refl.log");
-			String cp = new String(args[0]+"/jre/lib/rt.jar:"+args[0]+"/jre/lib/jce.jar:"+dir+":"+args[2]+"/dacapo-9.12-MR1-bach.jar");
+				
+		if(args[1].contains("true") || args[1].contains("True")) {
+			// this is a benchmark
+			if(args[3].contains("Harness")) {
+				// the benchmark is dacapo
+				String dir = new String(args[2]+"/out");
+				String refl_log = new String("reflection-log:"+dir+"/refl.log");
+				String cp = new String(args[0]+"/jre/lib/rt.jar:"+args[0]+"/jre/lib/jce.jar:"+dir+":"+args[2]+"/dacapo-9.12-MR1-bach.jar");
+				String[] sootArgs = {
+						// "-whole-program",
+						"-app",
+						"-allow-phantom-refs",
+						"-keep-bytecode-offset",
+						"-keep-offset",
+						"-soot-classpath", cp, "-prepend-classpath",
+						"-keep-line-number",
+						"-main-class", args[3],
+						"-process-dir", dir,
+						"-p", "cg", refl_log,
+						"-output-dir", args[4],
+						"-output-format", "jimple",
+						"-include", "org.apache.",
+						"-include", "org.w3c."
+				};
+				return sootArgs;			
+			}			
+		} else {
+			// this is a standard application
+			String cp = new String(args[0]+"/jre/lib/rt.jar:"+args[0]+"/jre/lib/jce.jar");
 			String[] sootArgs = {
 					// "-whole-program",
-					// "-coffi",
 					"-app",
 					"-allow-phantom-refs",
 					"-keep-bytecode-offset",
@@ -53,15 +48,14 @@ public class GetSootArgs {
 					"-soot-classpath", cp, "-prepend-classpath",
 					"-keep-line-number",
 					"-main-class", args[3],
-					"-process-dir", dir,
-					"-p", "cg", refl_log,
+					"-process-dir", args[2],
 					"-output-dir", args[4],
 					"-output-format", "jimple",
-					"-include", "org.apache.",
-					"-include", "org.w3c."
 			};
 			return sootArgs;			
+			
 		}
+		
 		return null;
 	}
 }
