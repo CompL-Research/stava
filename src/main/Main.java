@@ -44,7 +44,7 @@ public class Main {
 		
 //		printResForJVM(StaticAnalyser.summaries, "/home/nikhil/MTP/benchmarks/out", "/home/nikhil/MTP/soot_output_dir/dacapo");
 //		printResForJVM(StaticAnalyser.summaries, args[1], args[3]);
-//		printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, args[1], args[3]);
+		printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, args[4]);
 		/*
 		SummaryResolver sr = new SummaryResolver();
 		long res_start = System.currentTimeMillis();
@@ -61,7 +61,7 @@ public class Main {
 	}
 	
 	private static void printAllInfo(HashMap<SootMethod, PointsToGraph> ptgs,
-			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
+			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String opDir) {
 		
 		Path p_opDir = Paths.get(opDir);
 		ptgs.forEach((method,ptg) -> {
