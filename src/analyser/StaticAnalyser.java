@@ -56,14 +56,18 @@ public class StaticAnalyser extends BodyTransformer {
 	@Override
 	protected void internalTransform (Body body, String phasename, Map<String, String> options) {
 		boolean verboseFlag = false;
-//		if(body.getMethod().getName().equals("main")) verboseFlag = true;
+//		if(body.getMethod().getBytecodeSignature().equals("<jdk.internal.event.EventHelper$toString__1: apply(I)Ljava/lang/Object;>")) {
+//			verboseFlag = true;
+//			System.out.println(body.getMethod().toString());
+//		} 
 		String path = Scene.v().getSootClassPath();
 //		System.out.println(path);
 //		System.out.println("Package:"+body.getMethod().getDeclaringClass().getJavaPackageName());
 		Path p = Paths.get(path.substring(0, path.indexOf(":")) + "/" + body.getMethod().getDeclaringClass().toString() + ".res");
 //		System.out.println(".res file path:"+p);
 		HashMap<ObjectNode, EscapeStatus> summary = new HashMap<>();
-		System.out.println("Method Name: "+ body.getMethod().getSignature() );
+//		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() );
+		if(verboseFlag) System.out.println(body);
 		
 		PatchingChain<Unit> units = body.getUnits();
 
@@ -84,8 +88,8 @@ public class StaticAnalyser extends BodyTransformer {
 		while(!workListNext.isEmpty()){
 			if(verboseFlag) {
 				System.out.println("Loop "+i);
-				System.out.println("Worklist:");
-				workList.forEach(w -> System.out.println(w));
+//				System.out.println("Worklist:");
+//				workList.forEach(w -> System.out.println(w));
 				System.out.println("WorkListNext:");
 				workListNext.forEach(w -> System.out.println(w));
 			}
@@ -105,22 +109,12 @@ public class StaticAnalyser extends BodyTransformer {
 			 * 		add successors to workListNext
 			 * 		out[u] = outNew
 			 */
-			ObjectNode scrutiny = new ObjectNode(17, ObjectType.internal);
+			ObjectNode scrutinyObject = new ObjectNode(17, ObjectType.internal);
 			Iterator<Unit> iterator = workList.iterator();
 			while(iterator.hasNext()) {
 				Unit u = iterator.next();
+//				if(verboseFlag) System.out.println("Unit: "+u);
 				iterator.remove();
-//				int bci = -2;
-//				try {
-//					bci = utils.getBCI.get(u);
-//				} catch (Exception e) {
-					// do nothing
-//				}
-//				if(u.toString().contains("$r9 = \"java/lang/Throwable\"")) {
-//					if(body.getMethod().toString().contains("visitMaxs")) System.out.println("[Loop:"+i+"]I have reached that wretched line:"+u.toString()+" in method "+body.getMethod().toString());
-//					System.out.println(body);
-//					throw new IllegalArgumentException("That horrible line!");
-//				}
 				workListNext.remove(u);
 				FlowSet flowSet = flowSets.get(u);
 				/*
@@ -130,17 +124,7 @@ public class StaticAnalyser extends BodyTransformer {
 				for(Unit pred : cfg.getPredsOf(u)) {
 					inNew.union(flowSets.get(pred).getOut());
 				}
-				if(i>75 && body.getMethod().toString().contains("visitMaxs")) {
-//					System.out.println("[BCI:"+getBCI.get(u)+", unit:"+u.toString()+"]" );
-//					System.out.println("InNew:"+inNew.toString());
-				}
-//				if(bci == 135) {
-//					System.out.println("[BCI 135]");
-//					System.out.println("inNew:"+inNew);
-//					System.out.println("old:"+flowSets.get(u));
-//				}
 				if(inNew.equals(flowSet.getIn()) && !inNew.isEmpty() ) {
-//					if(body.getMethod().toString().contains("visitMaxs")) System.out.println("[Loop:"+i+"] Removing successors of:"+u);
 					workListNext.removeAll(cfg.getSuccsOf(u));
 					continue;
 				}
@@ -152,20 +136,28 @@ public class StaticAnalyser extends BodyTransformer {
 				PointsToGraph outNew = new PointsToGraph(inNew);
 				try {
 					apply(u, outNew, summary);
+					if(verboseFlag) System.out.println("Applied changes to: "+u);
 				}				
 				catch(Exception e) {
 					String s = "->*** Error at: "+u.toString()+" of "+body.getMethod().getBytecodeSignature();
-//					System.out.println(body);
 					System.out.println(s);
+//					System.out.println("outNew:"+outNew);
+//					System.out.println("body:"+body);
+//					System.out.println("summary:"+summary);
 //					System.out.println(workList);
 					throw e;
 				}
+//				if(verboseFlag) {	
+//					System.out.println("at: "+u.toString());
+//					System.out.println("inNew:"+inNew.toString());
+//					System.out.println("outNew:"+outNew.toString());
+//				}
 //				if(bci == 135) {
 //					System.out.println("outNew:"+outNew);
 //				}
-				if(verboseFlag && summary.containsKey(scrutiny)) {
-					System.out.println("after "+u.toString()+" summary["+scrutiny.toString()+"] = "+summary.get(scrutiny).toString());
-				}
+//				if(verboseFlag && summary.containsKey(scrutinyObject)) {
+//					System.out.println("after "+u.toString()+" summary["+scrutinyObject.toString()+"] = "+summary.get(scrutinyObject).toString());
+//				}
 				/*
 				 * 3. if(outNew != out[u]):
 				 * 		add successors to workList
@@ -181,6 +173,9 @@ public class StaticAnalyser extends BodyTransformer {
 			}
 			i+=1;
 			
+		}
+		if(verboseFlag) {
+			System.out.println("Finished analysis for:"+body.getMethod().getBytecodeSignature() );
 		}
 //		Analysis currentAnalysis = new Analysis(flowSets, summary);
 //		analysis.put(body, currentAnalysis);

@@ -7,18 +7,25 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import es.ConditionalValue;
+import es.Escape;
+import es.EscapeStatus;
+import es.NoEscape;
 //import exceptions.AnalyserPanicException;
-import ptg.*;
-import es.*;
-import utils.*;
+import ptg.ArrayField;
+import ptg.InvalidBCIObjectNode;
+import ptg.ObjectFactory;
+import ptg.ObjectNode;
+import ptg.ObjectType;
+import ptg.PointsToGraph;
 import soot.Local;
 import soot.PrimType;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.InvokeExpr;
 import soot.jimple.ClassConstant;
+import soot.jimple.InvokeExpr;
 import soot.jimple.NullConstant;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.StringConstant;
@@ -30,6 +37,8 @@ import soot.jimple.internal.JInstanceFieldRef;
 import soot.jimple.internal.JNewArrayExpr;
 import soot.jimple.internal.JNewExpr;
 import soot.jimple.internal.JNewMultiArrayExpr;
+import utils.IsMultiThreadedClass;
+import utils.getBCI;
 
 public class JAssignStmtHandler{
 	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
@@ -78,7 +87,7 @@ public class JAssignStmtHandler{
 		} else if(rhs instanceof JNewArrayExpr || rhs instanceof JNewMultiArrayExpr) {
 			JNewArrayStmt(u, ptg, summary);
 		} else if(rhs instanceof NullConstant) {
-//			EraseStmt(u, ptg, summary);
+			EraseStmt(u, ptg, summary);
 		} else if(rhs instanceof Local) {
 			CopyStmt(u, ptg, summary);
 		} else if(rhs instanceof JInstanceFieldRef) {
@@ -91,10 +100,8 @@ public class JAssignStmtHandler{
 			rhsArrayRef(u, ptg, summary);
 		} else if(rhs instanceof JCastExpr) {
 			rhsCastExpr(u, ptg, summary);
-		} else if(rhs instanceof StringConstant) {
-			storeStringConstantToLocalStmt(u, ptg, summary);
-		} else if(rhs instanceof ClassConstant) {
-			storeClassConstantToLocal(u, ptg, summary);
+		} else if(rhs instanceof StringConstant || rhs instanceof ClassConstant) {
+			storeConstantToLocal(u, ptg, summary);
 		} else error(u);		
 	}
 	
@@ -108,40 +115,29 @@ public class JAssignStmtHandler{
 		} else error(u);		
 	}
 	
-	private static void storeClassConstantToLocal(Unit u, PointsToGraph ptg,
+	private static void storeConstantToLocal(Unit u, PointsToGraph ptg,
 			HashMap<ObjectNode, EscapeStatus> summary) {
-		ObjectNode obj = null;
-		try {
-			obj = new ObjectNode(utils.getBCI.get(u), ObjectType.internal);
-		} catch (Exception e) {
-			obj = InvalidBCIObjectNode.getInstance(ObjectType.internal);
+		ObjectNode obj = ObjectFactory.getObj(u);
+		if(obj.type!=ObjectType.internal) {
+			throw new IllegalArgumentException("Object received from factory is not of required type: internal");			
 		}
 		Local lhs = (Local)((JAssignStmt)u).getLeftOp();
-		ptg.forcePutVar(lhs, obj);
+		ptg.addVar(lhs, obj);
 		EscapeStatus es = new EscapeStatus(Escape.getInstance());
-		summary.put(obj, es);
-	}
-
-	private static void storeStringConstantToLocalStmt(Unit u, PointsToGraph ptg,
-			HashMap<ObjectNode, EscapeStatus> summary) {
-		ObjectNode obj = null;
-		try {
-			obj = new ObjectNode(utils.getBCI.get(u), ObjectType.internal);
-		} catch (Exception e) {
-			obj = InvalidBCIObjectNode.getInstance(ObjectType.internal);
-		}
-		Local lhs = (Local)((JAssignStmt)u).getLeftOp();
-		ptg.forcePutVar(lhs, obj);
-		EscapeStatus es = new EscapeStatus();
 		if(obj instanceof InvalidBCIObjectNode) es.setEscape();
-		summary.put(obj, es);
+		summary.put(obj, es);		
 	}
-
+	
 	private static void storeStringConstantToInstanceFieldRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		JInstanceFieldRef lhs = (JInstanceFieldRef)((JAssignStmt)u).getLeftOp();
-		ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.internal);
+		ObjectNode obj = ObjectFactory.getObj(u);
+		if(obj.type!=ObjectType.internal) {
+			System.out.println("At unit:"+u);
+			throw new IllegalArgumentException("Object received from factory is not of required type: internal");
+		}
 		ptg.makeField((Local)lhs.getBase(), lhs.getField(), obj);
 		EscapeStatus es = new EscapeStatus();
+		if(obj instanceof InvalidBCIObjectNode) es.setEscape();
 		ptg.vars.get((Local)lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
 		summary.put(obj, es);
 	}
@@ -149,29 +145,28 @@ public class JAssignStmtHandler{
 	private static void storeStringConstantToArrayRefStmt(Unit u, PointsToGraph ptg,
 			HashMap<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef)((JAssignStmt)u).getLeftOp();
-		ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.internal);
+		ObjectNode obj = ObjectFactory.getObj(u);
+		if(obj.type!=ObjectType.internal) {
+			throw new IllegalArgumentException("Object received from factory is not of required type: internal");
+		}
 		ptg.storeStmtArrayRef((Local)lhs.getBase(), obj);
 		EscapeStatus es = new EscapeStatus();
+		if(obj instanceof InvalidBCIObjectNode) es.setEscape();
 		ptg.vars.get((Local)lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
 		summary.put(obj, es);
 	}
 
 	private static void storeClassConstantToArrayRef(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef)((JAssignStmt)u).getLeftOp();
-		ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.external);
+		ObjectNode obj = ObjectFactory.getObj(u);
+		if(obj.type!=ObjectType.internal) {
+			System.out.println("at unit:"+u);
+			throw new IllegalArgumentException("Object received from factory is not of required type: external");
+		}
 		ptg.storeStmtArrayRef((Local)lhs.getBase(), obj);
 		summary.put(obj, new EscapeStatus(Escape.getInstance()));
 	}
 
-	private static void error(Unit u) {
-		JAssignStmt stmt = (JAssignStmt) u;
-		Value lhs = stmt.getLeftOp();
-		Value rhs = stmt.getRightOp();		
-		String error = new String("Unidentified assignstmt case with "+u.toString()+" "+lhs.getClass()+","+ rhs.getClass());
-		System.out.println(error);
-		throw new IllegalArgumentException(error);		
-	}
-	
 	private static void eraseFieldRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		JInstanceFieldRef lhs = (JInstanceFieldRef)((JAssignStmt)u).getLeftOp();
 		if(!ptg.vars.containsKey((Local)lhs.getBase())) return;
@@ -212,11 +207,19 @@ public class JAssignStmtHandler{
 			ptSet = (Set<ObjectNode>)((HashSet<ObjectNode>)ptg.vars.get(rhs)).clone();			
 		} else {
 			// rhs is a field variable
-			ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.external);
-			ptSet = new HashSet<ObjectNode>();
-			summary.put(obj, new EscapeStatus(Escape.getInstance()));
+			// rhs could be null
+			System.out.println("[Copystmthelper] "+u.toString());
+			System.out.println("[Copystmthelper] "+ptg.toString());
+			throw new IllegalArgumentException("");
+//			ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.external);
+//			ptSet = new HashSet<ObjectNode>();
+//			summary.put(obj, new EscapeStatus(Escape.getInstance()));
 		}
-		ptg.vars.put(lhs, ptSet);		
+		if(ptg.vars.containsKey(lhs)) {
+			ptg.vars.get(lhs).addAll(ptSet);
+		} else {
+			ptg.vars.put(lhs, ptSet);					
+		}
 	}
 
 	/*
@@ -233,12 +236,23 @@ public class JAssignStmtHandler{
 		} else {
 			es = new EscapeStatus(NoEscape.getInstance());
 		}
-		ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.internal);
+		
+		ObjectNode obj;
 		try {
-			ptg.forcePutVar((Local)lhs, obj);
-		} catch (Exception e) {
-			System.out.println(lhs+" may not be a local. Typecast must have failed!");
-			throw new InvalidParameterException(lhs.toString()+" may not be a local. Typecast must have failed!");
+			obj = new ObjectNode(getBCI.get(u), ObjectType.internal);
+		} catch (Exception e1) {
+			obj = InvalidBCIObjectNode.getInstance(ObjectType.internal);
+			es.setEscape();
+		}
+		if(ptg.vars.containsKey(lhs)) {
+			ptg.vars.get(lhs).add(obj);
+		} else {
+			try {
+				ptg.forcePutVar((Local)lhs, obj);
+			} catch (Exception e) {
+				System.out.println(lhs+" may not be a local. Typecast must have failed!");
+				throw new InvalidParameterException(lhs.toString()+" may not be a local. Typecast must have failed!");
+			}			
 		}
 		if(!summary.containsKey(obj))summary.put(obj, es);
 	}
@@ -273,7 +287,7 @@ public class JAssignStmtHandler{
 	}
 	
 	/*
-	 * Warning: This implementation might 2 objects for an lhs based on the
+	 * Warning: This implementation might add 2 objects for an lhs based on the
 	 * ObjectType of the base, as in a case where the points-to set of the 
 	 * base containing objects of both internal and external type.
 	 */
@@ -351,7 +365,6 @@ public class JAssignStmtHandler{
 			return;
 //			throw new IllegalArgumentException("[JAssignStmtHandler] ptset for "+lhs.getBase().toString()+" of "+u.toString()+" not found!");
 		}
-		Iterator<ObjectNode> it = ptSet.iterator();
 		// add field object for every parent object.
 		Set<ObjectNode> objSet = ptg.vars.get(rhs);
 		if(objSet==null) {
@@ -391,7 +404,7 @@ public class JAssignStmtHandler{
 				// TODO: that's all? no need for make field?
 			} else {
 				ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
-				ptg.forcePutVar(lhs, obj);
+				ptg.addVar(lhs, obj);
 				ptg.makeField((Local)rhs.getBase(), rhs.getField(), obj);
 				
 				//assimilate parents' es
@@ -436,14 +449,16 @@ public class JAssignStmtHandler{
 	}
 	
 	public static void EraseStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
-		/*
-		 * find case of lhs
-		 */
 		Value lhs = ((JAssignStmt) u).getLeftOp();
 		if(lhs instanceof StaticFieldRef) {
 			// Ignore - [Verified]
 		} else if (lhs instanceof Local) {
-			ptg.vars.put((Local)lhs, new HashSet<>());
+			if(ptg.vars.containsKey(lhs)) {
+				// do nothing
+			} else {
+				// ensure empty set for this var
+				ptg.vars.put((Local)lhs, new HashSet<ObjectNode>());
+			}
 		} else {
 			System.out.println("Unidentified case at: "+ u);
 			throw new IllegalArgumentException(u.toString());
@@ -455,16 +470,32 @@ public class JAssignStmtHandler{
 		Value rhs = ((JAssignStmt)u).getRightOp();
 		AbstractInvokeExpr expr = (AbstractInvokeExpr)rhs;
 		SootMethod m = expr.getMethod();
-		ObjectNode n = new ObjectNode(getBCI.get(u), ObjectType.external);
-		ptg.forcePutVar(lhs, n);
-		if(!m.isJavaLibraryMethod()) {
-//			System.out.println(m.toString()+" is not a library method");
-			summary.put(n, new EscapeStatus(new ConditionalValue(m, new ObjectNode(0, ObjectType.returnValue), new Boolean(true))));
-		} 
-		else {
-			summary.put(n, new EscapeStatus());
-		} 
 		JInvokeStmtHandler.handleExpr(expr, ptg, summary);
+		EscapeStatus es = new EscapeStatus(new ConditionalValue(m, new ObjectNode(0, ObjectType.returnValue), new Boolean(true)));
+		ObjectNode n;
+		try {
+			n = new ObjectNode(getBCI.get(u), ObjectType.external);
+		} catch (Exception e) {
+			System.out.println("Making it an invalid obj at:"+u);
+			n = InvalidBCIObjectNode.getInstance(ObjectType.external);
+		}
+		ptg.addVar(lhs, n);
+		summary.put(n, es);
+//		if(!m.isJavaLibraryMethod()) {
+//			System.out.println(m.toString()+" is not a library method");
+//		} 
+//		else {
+//			summary.put(n, new EscapeStatus());
+//		} 
+	}
+
+	private static void error(Unit u) {
+		JAssignStmt stmt = (JAssignStmt) u;
+		Value lhs = stmt.getLeftOp();
+		Value rhs = stmt.getRightOp();		
+		String error = new String("Unidentified assignstmt case with "+u.toString()+" "+lhs.getClass()+","+ rhs.getClass());
+		System.out.println(error);
+		throw new IllegalArgumentException(error);		
 	}
 
 }

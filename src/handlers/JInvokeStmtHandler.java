@@ -32,9 +32,9 @@ public class JInvokeStmtHandler {
 		handleExpr(expr, ptg, summary);
 	}
 	public static void handleExpr(InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
-		if(expr.getMethod().isJavaLibraryMethod()) {
-			return;
-		} 
+//		if(expr.getMethod().isJavaLibraryMethod()) {
+//			return;
+//		} 
 		/*
 		 * special: only constructors and initializers
 		 * static: static method calls

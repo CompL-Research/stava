@@ -57,7 +57,7 @@ public class JIdentityStmtHandler {
 			}
 		}
 		if(cvobj!=null) {
-			ConditionalValue cv = new ConditionalValue(null, cvobj);
+			ConditionalValue cv = new ConditionalValue(null, cvobj, true);
 			summary.put(obj, new EscapeStatus(cv));			
 		}
 	}

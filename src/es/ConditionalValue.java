@@ -18,10 +18,10 @@ public class ConditionalValue extends EscapeState {
 	public final int hashcode;
 	
 	public ConditionalValue(SootMethod m, ObjectNode obj, List<SootField> fl, Boolean isReal) {
-		if(m!=null && m.isJavaLibraryMethod()) {
-			System.out.println("******************************************");
-			throw new IllegalArgumentException(m.toString()+" isjavaLibraryMethod!");
-		}
+//		if(m!=null && m.isJavaLibraryMethod()) {
+//			System.out.println("******************************************");
+//			throw new IllegalArgumentException(m.toString()+" isjavaLibraryMethod!");
+//		}
 		method = m; object = obj;
 		fieldList = fl; this.isReal = isReal;
 		int mhash;
