@@ -117,6 +117,7 @@ public class JAssignStmtHandler{
 	
 	private static void storeConstantToLocal(Unit u, PointsToGraph ptg,
 			HashMap<ObjectNode, EscapeStatus> summary) {
+		// TODO: ObjectFactory no longer has responsibility to figure out ObjectType
 		ObjectNode obj = ObjectFactory.getObj(u);
 		if(obj.type!=ObjectType.internal) {
 			throw new IllegalArgumentException("Object received from factory is not of required type: internal");			
@@ -183,7 +184,9 @@ public class JAssignStmtHandler{
 
 	private static void rhsCastExpr(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		// TODO: put a check for cast to a runnable class.
+		// a = (Cast?)b
 		Value op = ((JCastExpr)((JAssignStmt)u).getRightOp()).getOp();
+		// a = (Cast) null;
 		if(op instanceof NullConstant) return;
 		Local rhs;
 		try {

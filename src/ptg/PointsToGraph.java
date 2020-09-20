@@ -270,6 +270,7 @@ public class PointsToGraph {
 		if(!vars.containsKey(l)) return;
 		Set<ObjectNode> s = new HashSet<>();
 		s.addAll(vars.get(l));
+		// TODO: Incorrect. Rectify this.
 		vars.put(RetLocal.getInstance(), s);
 		ObjectNode o = new ObjectNode(0, ObjectType.returnValue);
 		ConditionalValue ret = new ConditionalValue(null, o);
