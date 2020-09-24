@@ -5,13 +5,13 @@ Stava is a static program analysis for identifying stack allocable objects of co
 ## Getting Started
 
 ### Installation
-This project only requires a working installation of Java 8. Clone the repo and you're good to go! Set up scripts from the [scripts](https://github.com/42niks/stava/tree/master/scripts) package and set them up according to your installation.
+This project only requires a working installation of Java 8. Clone the repo and you're good to go! Use scripts from the [scripts](https://github.com/42niks/stava/tree/master/scripts) package and set them up according to your installation.
 
 ## Analysing Code 
 Sample scripts are provided in the [scripts](https://github.com/42niks/stava/tree/master/scripts) directory. There are 2 types of usecases for stava.
 * Benchmark Code: This code is expected to be precompiled. These can be benchmarks like DaCapo.
 * Application Code: This is code written by user that has to be compiled.
-Customise the script to your installation and run them directly. More instructions [here](https://github.com/42niks/stava/blob/master/scripts/README.md).
+More instructions [here](https://github.com/42niks/stava/blob/master/scripts/README.md).
 
 ## Built With
 * [Soot](https://github.com/soot-oss/soot)- a Java optimization framework which enables this project to look into class files and much more. 
