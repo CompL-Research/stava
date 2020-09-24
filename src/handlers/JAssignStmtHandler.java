@@ -46,7 +46,9 @@ public class JAssignStmtHandler{
 			/*
 			 * JAssignStmt Example:
 			 * $r2 = new java.lang.String
-			 */	
+			 * It has an lhs and rhs. The changes will be determined by
+			 * what exactly lhs and rhs are.
+			 */
 			JAssignStmt stmt = (JAssignStmt) u;
 			Value lhs = stmt.getLeftOp();
 			Value rhs = stmt.getRightOp();
@@ -60,20 +62,27 @@ public class JAssignStmtHandler{
 			} else if(lhs instanceof JInstanceFieldRef) {
 				lhsIsJInstanceFieldRef(rhs, u, ptg, summary);
 			} else if(lhs instanceof JArrayRef) {
+				// arr[0]
 				if(rhs instanceof StringConstant) {
+					// "this is a string constant"
 					storeStringConstantToArrayRefStmt(u, ptg, summary);					
 				} else if(rhs instanceof ClassConstant) {
+					// Integer
 					storeClassConstantToArrayRef(u, ptg, summary);
 				} else if(rhs instanceof Local) {
+					// r0
 					lhsArrayRef(u, ptg, summary);
 				} else if(rhs instanceof NullConstant) {
+					// null
 					// nothing to do here!
 				} else error(u);
 			} else if(lhs instanceof StaticFieldRef) {
+				// staticClass.field
 				if(rhs instanceof StringConstant || rhs instanceof NullConstant) {
 					// Nothing to do!
 				} else if(rhs instanceof Local) {
-					StaticStoreStmt(u, ptg, summary);					
+					//
+					StaticStoreStmt(u, ptg, summary);
 				} else error(u);
 			} else {
 				error(u);
@@ -83,35 +92,48 @@ public class JAssignStmtHandler{
 	
 	private static void lhsIsLocal(Value rhs, Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		if(rhs instanceof JNewExpr) {
+			// new String()
 			JNewStmt(u, ptg, summary);
 		} else if(rhs instanceof JNewArrayExpr || rhs instanceof JNewMultiArrayExpr) {
+			// new Integer()[5] or new Integer()[10][2]
 			JNewArrayStmt(u, ptg, summary);
 		} else if(rhs instanceof NullConstant) {
+			// null
 			EraseStmt(u, ptg, summary);
 		} else if(rhs instanceof Local) {
+			// r0
 			CopyStmt(u, ptg, summary);
 		} else if(rhs instanceof JInstanceFieldRef) {
+			// ro.field
 			LoadStmt(u, ptg, summary);
 		} else if(rhs instanceof StaticFieldRef) {
+			// System.out
 			StaticLoadStmt(u, ptg, summary);
 		} else if(rhs instanceof InvokeExpr) {
+			// foo()
 			InvokeExpr(u, ptg, summary);
 		} else if(rhs instanceof JArrayRef) {
+			// args[0]
 			rhsArrayRef(u, ptg, summary);
 		} else if(rhs instanceof JCastExpr) {
+			// (Set<ObjectNode>) new HashSet<ObjectNode>()
 			rhsCastExpr(u, ptg, summary);
 		} else if(rhs instanceof StringConstant || rhs instanceof ClassConstant) {
+			// "hello" or Integer
 			storeConstantToLocal(u, ptg, summary);
-		} else error(u);		
+		} else error(u);
 	}
 	
 	private static void lhsIsJInstanceFieldRef(Value rhs, Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		if(rhs instanceof StringConstant) {
+			// "this is a string constant"
 			storeStringConstantToInstanceFieldRefStmt(u, ptg, summary);					
 		} else if(rhs instanceof NullConstant) {
+			// null
 //			eraseFieldRefStmt(u, ptg, summary);
 		} else if(rhs instanceof Local) {
-			StoreStmt(u, ptg, summary);					
+			// r0
+			StoreStmt(u, ptg, summary);
 		} else error(u);		
 	}
 	
