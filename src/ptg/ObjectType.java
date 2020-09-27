@@ -5,7 +5,7 @@ package ptg;
  */
 
 public enum ObjectType {
-	
+
 	/*
 	 * This object has been declared in this method body.
 	 */
@@ -15,8 +15,8 @@ public enum ObjectType {
 	 * This object has been declared elsewhere, and
 	 * wasn't passed as a parameter to this method.
 	 */
-	external, 
-	
+	external,
+
 	/*
 	 * Argument is the one that is passed on to another function.
 	 * Is this actually required??
@@ -28,7 +28,7 @@ public enum ObjectType {
 	 * parameter with a reference -1 will be used for 'this'.
 	 */
 	parameter,
-	
+
 	/*
 	 * For an object that is returned to the caller.
 	 */

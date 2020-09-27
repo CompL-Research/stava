@@ -1,50 +1,24 @@
 package analyser;
 
+import es.EscapeStatus;
+import handlers.JAssignStmt.JAssignStmtHandler;
+import handlers.*;
+import ptg.*;
+import soot.*;
+import soot.jimple.MonitorStmt;
+import soot.jimple.internal.*;
+import soot.toolkits.graph.BriefUnitGraph;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
-import es.EscapeStatus;
-import handlers.JAssignStmtHandler;
-import handlers.JIdentityStmtHandler;
-import handlers.JInvokeStmtHandler;
-import handlers.JReturnStmtHandler;
-import handlers.JThrowStmtHandler;
-import handlers.MonitorStmtHandler;
-import ptg.Analysis;
-import ptg.FlowSet;
-import ptg.ObjectNode;
-import ptg.ObjectType;
-import ptg.PointsToGraph;
-import soot.Body;
-import soot.BodyTransformer;
-import soot.PatchingChain;
-import soot.Scene;
-import soot.SootMethod;
-import soot.Unit;
-import soot.jimple.MonitorStmt;
-import soot.jimple.internal.JAssignStmt;
-import soot.jimple.internal.JGotoStmt;
-import soot.jimple.internal.JIdentityStmt;
-import soot.jimple.internal.JIfStmt;
-import soot.jimple.internal.JInvokeStmt;
-import soot.jimple.internal.JLookupSwitchStmt;
-import soot.jimple.internal.JReturnStmt;
-import soot.jimple.internal.JReturnVoidStmt;
-import soot.jimple.internal.JTableSwitchStmt;
-import soot.jimple.internal.JThrowStmt;
-import soot.toolkits.graph.BriefUnitGraph;
-import utils.getBCI;
-
 public class StaticAnalyser extends BodyTransformer {
-	public static HashMap<SootMethod,PointsToGraph> ptgs;
-	public static HashMap<SootMethod,HashMap<ObjectNode,EscapeStatus>> summaries;
+	public static HashMap<SootMethod, PointsToGraph> ptgs;
+	public static HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
 	public static LinkedHashMap<Body, Analysis> analysis;
+
 	public StaticAnalyser() {
 		super();
 		analysis = new LinkedHashMap<>();
@@ -54,7 +28,7 @@ public class StaticAnalyser extends BodyTransformer {
 
 
 	@Override
-	protected void internalTransform (Body body, String phasename, Map<String, String> options) {
+	protected void internalTransform(Body body, String phasename, Map<String, String> options) {
 		boolean verboseFlag = false;
 //		if(body.getMethod().getBytecodeSignature().equals("<jdk.internal.event.EventHelper$toString__1: apply(I)Ljava/lang/Object;>")) {
 //			verboseFlag = true;
@@ -67,8 +41,8 @@ public class StaticAnalyser extends BodyTransformer {
 //		System.out.println(".res file path:"+p);
 		HashMap<ObjectNode, EscapeStatus> summary = new HashMap<>();
 //		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() );
-		if(verboseFlag) System.out.println(body);
-		
+		if (verboseFlag) System.out.println(body);
+
 		PatchingChain<Unit> units = body.getUnits();
 
 		// The flowSets
@@ -80,14 +54,14 @@ public class StaticAnalyser extends BodyTransformer {
 		LinkedHashSet<Unit> workListNext = new LinkedHashSet<Unit>(units);
 		LinkedHashSet<Unit> temp = null;
 		// initialize the flow sets with empty sets
-		for(Unit u : units) {
+		for (Unit u : units) {
 			flowSets.put(u, new FlowSet());
 		}
-		
-		int i=0;
-		while(!workListNext.isEmpty()){
-			if(verboseFlag) {
-				System.out.println("Loop "+i);
+
+		int i = 0;
+		while (!workListNext.isEmpty()) {
+			if (verboseFlag) {
+				System.out.println("Loop " + i);
 //				System.out.println("Worklist:");
 //				workList.forEach(w -> System.out.println(w));
 				System.out.println("WorkListNext:");
@@ -97,9 +71,11 @@ public class StaticAnalyser extends BodyTransformer {
 			 * Swap workList and workListNext
 			 */
 //			if(body.getMethod().toString().contains("visitMaxs")) System.out.println("[Loop:"+i+"]:"+printList(workListNext));
-			temp = workList; workList = workListNext; workListNext = temp;
+			temp = workList;
+			workList = workListNext;
+			workListNext = temp;
 			workListNext.clear();
-			
+
 			/*
 			 * Main Work Loop:
 			 * for each Unit u in workList
@@ -111,7 +87,7 @@ public class StaticAnalyser extends BodyTransformer {
 			 */
 			ObjectNode scrutinyObject = new ObjectNode(17, ObjectType.internal);
 			Iterator<Unit> iterator = workList.iterator();
-			while(iterator.hasNext()) {
+			while (iterator.hasNext()) {
 				Unit u = iterator.next();
 //				if(verboseFlag) System.out.println("Unit: "+u);
 				iterator.remove();
@@ -121,25 +97,24 @@ public class StaticAnalyser extends BodyTransformer {
 				 * 1. inNew = union(out[predecessors])
 				 */
 				PointsToGraph inNew = new PointsToGraph();
-				for(Unit pred : cfg.getPredsOf(u)) {
+				for (Unit pred : cfg.getPredsOf(u)) {
 					inNew.union(flowSets.get(pred).getOut());
 				}
-				if(inNew.equals(flowSet.getIn()) && !inNew.isEmpty() ) {
+				if (inNew.equals(flowSet.getIn()) && !inNew.isEmpty()) {
 					workListNext.removeAll(cfg.getSuccsOf(u));
 					continue;
 				}
 				flowSet.setIn(inNew);
-				
+
 				/*
 				 * 2. outNew = apply(u, inNew)
 				 */
 				PointsToGraph outNew = new PointsToGraph(inNew);
 				try {
 					apply(u, outNew, summary);
-					if(verboseFlag) System.out.println("Applied changes to: "+u);
-				}				
-				catch(Exception e) {
-					String s = "->*** Error at: "+u.toString()+" of "+body.getMethod().getBytecodeSignature();
+					if (verboseFlag) System.out.println("Applied changes to: " + u);
+				} catch (Exception e) {
+					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
 					System.out.println(s);
 //					System.out.println("outNew:"+outNew);
 //					System.out.println("body:"+body);
@@ -163,7 +138,7 @@ public class StaticAnalyser extends BodyTransformer {
 				 * 		add successors to workList
 				 * 		out[u] = outNew
 				 */
-				if(!outNew.equals(flowSet.getOut())) {
+				if (!outNew.equals(flowSet.getOut())) {
 //					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutNew is new:"+outNew.toString());
 					workListNext.addAll(cfg.getSuccsOf(u));
 					flowSet.setOut(outNew);
@@ -171,11 +146,11 @@ public class StaticAnalyser extends BodyTransformer {
 //					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutOld (remains same):"+flowSet.getOut().toString());
 				}
 			}
-			i+=1;
-			
+			i += 1;
+
 		}
-		if(verboseFlag) {
-			System.out.println("Finished analysis for:"+body.getMethod().getBytecodeSignature() );
+		if (verboseFlag) {
+			System.out.println("Finished analysis for:" + body.getMethod().getBytecodeSignature());
 		}
 //		Analysis currentAnalysis = new Analysis(flowSets, summary);
 //		analysis.put(body, currentAnalysis);
@@ -193,49 +168,49 @@ public class StaticAnalyser extends BodyTransformer {
 		*/
 		Iterator<Entry<Unit, FlowSet>> iterator = flowSets.entrySet().iterator();
 		Entry<Unit, FlowSet> elem = iterator.next();
-		while(iterator.hasNext()) elem = iterator.next();
+		while (iterator.hasNext()) elem = iterator.next();
 		PointsToGraph ptg = elem.getValue().getOut();
 		ptgs.put(body.getMethod(), ptg);
 		summaries.put(body.getMethod(), summary);
 	}
-	
+
 	/*
 	 * apply will apply the changes of the current unit on the provided
 	 * points-to graph. Note that this will NOT make a copy to make
 	 * changes on.
 	 */
 
-	public void apply(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary){
-		if(u instanceof JAssignStmt) {
+	public void apply(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+		if (u instanceof JAssignStmt) {
 			JAssignStmtHandler.handle(u, ptg, summary);
-		} else if(u instanceof JIdentityStmt) {
+		} else if (u instanceof JIdentityStmt) {
 			JIdentityStmtHandler.handle(u, ptg, summary);
-		} else if(u instanceof JInvokeStmt) {
+		} else if (u instanceof JInvokeStmt) {
 			JInvokeStmtHandler.handle(u, ptg, summary);
-		} else if(u instanceof JReturnVoidStmt) {
+		} else if (u instanceof JReturnVoidStmt) {
 			// Nothing to do here!
-		} else if(u instanceof JReturnStmt) {
+		} else if (u instanceof JReturnStmt) {
 			JReturnStmtHandler.handle(u, ptg, summary);
-		} else if(u instanceof JThrowStmt) {
+		} else if (u instanceof JThrowStmt) {
 			JThrowStmtHandler.handle(u, ptg, summary);
-		} else if(u instanceof MonitorStmt) {
+		} else if (u instanceof MonitorStmt) {
 			MonitorStmtHandler.handle(u, ptg, summary);
-		} else if(u instanceof JIfStmt || u instanceof JGotoStmt ||
+		} else if (u instanceof JIfStmt || u instanceof JGotoStmt ||
 				u instanceof JTableSwitchStmt || u instanceof JLookupSwitchStmt) {
 		} else {
-			System.out.println("Unidentified class: "+ u.getClass() + " with BCI "+ utils.getBCI.get(u) +" at:\n"+u);
+			System.out.println("Unidentified class: " + u.getClass() + " with BCI " + utils.getBCI.get(u) + " at:\n" + u);
 			throw new IllegalArgumentException(u.toString());
 		}
 	}
-	
+
 	public void printAnalysis() {
-		for(Map.Entry<Body, Analysis> entry : analysis.entrySet()) {
-			System.out.println("Class: "+entry.getKey().getMethod().getDeclaringClass());
-			System.out.println("Method: "+entry.getKey().getMethod().getName());
-			System.out.println("Analysis:\n"+entry.getValue());
+		for (Map.Entry<Body, Analysis> entry : analysis.entrySet()) {
+			System.out.println("Class: " + entry.getKey().getMethod().getDeclaringClass());
+			System.out.println("Method: " + entry.getKey().getMethod().getName());
+			System.out.println("Analysis:\n" + entry.getValue());
 		}
 	}
-	
+
 	private String printList(LinkedHashSet<Unit> l) {
 		StringBuilder sb = new StringBuilder();
 		sb.append("[");

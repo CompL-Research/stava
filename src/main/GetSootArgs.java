@@ -10,14 +10,14 @@ public class GetSootArgs {
 		 * args[3] -> main class
 		 * args[4] -> output directory
 		 */
-				
-		if(args[1].contains("true") || args[1].contains("True")) {
+
+		if (args[1].contains("true") || args[1].contains("True")) {
 			// this is a benchmark
-			if(args[3].contains("Harness")) {
+			if (args[3].contains("Harness")) {
 				// the benchmark is dacapo
-				String dir = new String(args[2]+"/out");
-				String refl_log = new String("reflection-log:"+dir+"/refl.log");
-				String cp = new String(args[0]+"/jre/lib/rt.jar:"+args[0]+"/jre/lib/jce.jar:"+dir+":"+args[2]+"/dacapo-9.12-MR1-bach.jar");
+				String dir = args[2] + "/out";
+				String refl_log = "reflection-log:" + dir + "/refl.log";
+				String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
 				String[] sootArgs = {
 						// "-whole-program",
 						"-app",
@@ -34,11 +34,11 @@ public class GetSootArgs {
 						"-include", "org.apache.",
 						"-include", "org.w3c."
 				};
-				return sootArgs;			
-			}			
+				return sootArgs;
+			}
 		} else {
 			// this is a standard application
-			String cp = new String(args[0]+"/jre/lib/rt.jar:"+args[0]+"/jre/lib/jce.jar");
+			String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
 			String[] sootArgs = {
 					// "-whole-program",
 					"-app",
@@ -52,10 +52,10 @@ public class GetSootArgs {
 					"-output-dir", args[4],
 					"-output-format", "jimple",
 			};
-			return sootArgs;			
-			
+			return sootArgs;
+
 		}
-		
+
 		return null;
 	}
 }

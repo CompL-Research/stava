@@ -1,3 +1,4 @@
 package es;
 
-public class EscapeState {}
+public class EscapeState {
+}
