@@ -1,5 +1,7 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.EscapeStatus;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
@@ -65,9 +67,9 @@ public class CopyStmt {
 //			ptSet = new HashSet<ObjectNode>();
 //			summary.put(obj, new EscapeStatus(Escape.getInstance()));
 		}
-		if (ptg.vars.containsKey(lhs)) {
+		if(AssignStmtHandler.COPY == UpdateType.WEAK && ptg.vars.containsKey(lhs)) {
 			ptg.vars.get(lhs).addAll(ptSet);
-		} else {
+		} else{
 			ptg.vars.put(lhs, ptSet);
 		}
 	}
