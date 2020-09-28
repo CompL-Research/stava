@@ -1,5 +1,7 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.ConditionalValue;
 import es.EscapeStatus;
 import handlers.JInvokeStmtHandler;
@@ -36,7 +38,11 @@ public class InvokeStmt {
 			System.out.println("Making it an invalid obj at:" + u);
 			n = InvalidBCIObjectNode.getInstance(ObjectType.external);
 		}
-		ptg.addVar(lhs, n);
+		if (AssignStmtHandler.INVOKE == UpdateType.STRONG) {
+			ptg.forcePutVar(lhs, n);
+		} else {
+			ptg.addVar(lhs, n);
+		}
 		summary.put(n, es);
 //		if(!m.isJavaLibraryMethod()) {
 //			System.out.println(m.toString()+" is not a library method");

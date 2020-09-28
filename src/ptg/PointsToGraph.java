@@ -43,6 +43,11 @@ public class PointsToGraph {
 	}
 
 	public void forcePutVar(Local l, ObjectNode obj) {
+		// tiny optimization to prevent creation of unnecessary new objects
+		if (vars.containsKey(l)) {
+			Set<ObjectNode> objectNodes = vars.get(l);
+			if (objectNodes.size() == 1 && objectNodes.contains(obj)) return;
+		}
 		Set<ObjectNode> s = new HashSet<>();
 		s.add(obj);
 		vars.put(l, s);
