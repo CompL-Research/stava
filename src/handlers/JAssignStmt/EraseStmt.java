@@ -1,5 +1,7 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.EscapeStatus;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
@@ -20,18 +22,14 @@ public class EraseStmt {
 	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		Value lhs = ((JAssignStmt) u).getLeftOp();
 		if (lhs instanceof StaticFieldRef) {
-			// Ignore - [Verified] - No!
-			// TODO: Change this
+			// Ignore - [Verified]
 		} else if (lhs instanceof Local) {
-			if (ptg.vars.containsKey(lhs)) {
-				// do nothing
-			} else {
-				// ensure empty set for this var
-				ptg.vars.put((Local) lhs, new HashSet<ObjectNode>());
+			if(AssignStmtHandler.ERASE == UpdateType.STRONG && ptg.vars.containsKey(lhs)) {
+				ptg.vars.get(lhs).clear(); // avoids creation of unnecessary new object
 			}
+			if(!ptg.vars.containsKey(lhs)) ptg.vars.put((Local)lhs, new HashSet<ObjectNode>());
 		} else {
-			System.out.println("Unidentified case at: " + u);
-			throw new IllegalArgumentException(u.toString());
+			utils.AnalysisError.unidentifiedAssignStmtCase(u);
 		}
 	}
 }
