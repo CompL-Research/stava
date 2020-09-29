@@ -53,7 +53,31 @@ public class PointsToGraph {
 		vars.put(l, s);
 	}
 
-	public void makeField(ObjectNode obj, SootField f, Set<ObjectNode> objSet) {
+	public void STRONG_makeField(ObjectNode obj, SootField f, Set<ObjectNode> objSet) {
+		Map<SootField, Set<ObjectNode>> fieldMap = null;
+		if (!fields.containsKey(obj)) {
+			fieldMap = new HashMap<>();
+			fieldMap.put(f, objSet);
+		} else {
+			fieldMap = fields.get(obj);
+			if (!fieldMap.containsKey(f) || !fieldMap.get(f).equals(objSet)) {
+				fieldMap.put(f, objSet);
+			}
+		}
+		fields.put(obj, fieldMap);
+	}
+
+	public void STRONG_makeField(Local lhs, SootField f, Local rhs) {
+		Set<ObjectNode> lhsPtSet = vars.get(lhs);
+		if (lhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		Set<ObjectNode> rhsPtSet = vars.get(rhs);
+		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		for(ObjectNode parent : lhsPtSet) {
+			STRONG_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
+		}
+	}
+
+	public void WEAK_makeField(ObjectNode obj, SootField f, Set<ObjectNode> objSet) {
 		Map<SootField, Set<ObjectNode>> fieldMap = null;
 		if (!fields.containsKey(obj)) {
 			fieldMap = new HashMap<SootField, Set<ObjectNode>>();
@@ -67,20 +91,20 @@ public class PointsToGraph {
 		fields.put(obj, fieldMap);
 	}
 
-	public void makeField(ObjectNode obj, SootField f, ObjectNode child) {
+	public void WEAK_makeField(ObjectNode obj, SootField f, ObjectNode child) {
 		Set<ObjectNode> objSet = new HashSet<ObjectNode>();
 		objSet.add(child);
-		makeField(obj, f, objSet);
+		WEAK_makeField(obj, f, objSet);
 	}
 
-	public void makeField(Local l, SootField f, ObjectNode child) {
+	public void WEAK_makeField(Local l, SootField f, ObjectNode child) {
 		Set<ObjectNode> ptSet = vars.get(l);
 		if (ptSet == null) throw new IllegalArgumentException("Pts-to set for " + l + " doesn't exist!");
 		Iterator<ObjectNode> it = ptSet.iterator();
 		while (it.hasNext()) {
 			ObjectNode obj = it.next();
 //			System.out.println(obj + f.toString() + child);
-			makeField(obj, f, child);
+			WEAK_makeField(obj, f, child);
 		}
 	}
 

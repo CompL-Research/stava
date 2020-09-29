@@ -1,5 +1,7 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.Escape;
 import es.EscapeStatus;
 import es.NoEscape;
@@ -43,12 +45,8 @@ public class NewStmt {
 		// check if rhs is runnable
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		Value lhs = ((JAssignStmt) u).getLeftOp();
-		EscapeStatus es;
-		if (IsMultiThreadedClass.check(((JNewExpr) rhs).getBaseType().getSootClass())) {
-			es = new EscapeStatus(Escape.getInstance());
-		} else {
-			es = new EscapeStatus(NoEscape.getInstance());
-		}
+		EscapeStatus es = new EscapeStatus();
+		if (IsMultiThreadedClass.check(((JNewExpr) rhs).getBaseType().getSootClass())) es.setEscape();
 
 		ObjectNode obj;
 		try {
@@ -57,23 +55,19 @@ public class NewStmt {
 			obj = InvalidBCIObjectNode.getInstance(ObjectType.internal);
 			es.setEscape();
 		}
-		if (ptg.vars.containsKey(lhs)) {
-			ptg.vars.get(lhs).add(obj);
+		if (AssignStmtHandler.NEW == UpdateType.STRONG){
+			ptg.forcePutVar((Local) lhs, obj);
 		} else {
-			try {
-				ptg.forcePutVar((Local) lhs, obj);
-			} catch (Exception e) {
-				System.out.println(lhs + " may not be a local. Typecast must have failed!");
-				throw new InvalidParameterException(lhs.toString() + " may not be a local. Typecast must have failed!");
-			}
+			ptg.addVar((Local) lhs, obj);
 		}
 		if (!summary.containsKey(obj)) summary.put(obj, es);
 	}
 
 	private static void JNewArrayStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		// check if rhs is runnable
-//		Value rhs = ((JAssignStmt) u).getRightOp();
+		Value rhs = ((JAssignStmt) u).getRightOp();
 		Value lhs = ((JAssignStmt) u).getLeftOp();
+
 		EscapeStatus es;
 		es = new EscapeStatus(NoEscape.getInstance());
 		ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.internal);

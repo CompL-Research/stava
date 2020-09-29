@@ -70,7 +70,7 @@ public class LoadStmt {
 			} else {
 				ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
 				ptg.addVar(lhs, obj);
-				ptg.makeField((Local) rhs.getBase(), rhs.getField(), obj);
+				ptg.WEAK_makeField((Local) rhs.getBase(), rhs.getField(), obj);
 
 				//assimilate parents' es
 				EscapeStatus parentsES = new EscapeStatus();
@@ -140,7 +140,7 @@ public class LoadStmt {
 					throw new InvalidParameterException("Array of argument makes no sense!");
 			}
 
-			ptg.makeField(parent, f, child);
+			ptg.WEAK_makeField(parent, f, child);
 			EscapeStatus es = summary.get(parent).makeField(f);
 			if (summary.containsKey(child)) {
 				summary.get(child).status.addAll(es.status);

@@ -1,5 +1,7 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.Escape;
 import es.EscapeStatus;
 import ptg.*;
@@ -76,28 +78,20 @@ public class StoreStmt {
 		// Store case
 		JInstanceFieldRef lhs = (JInstanceFieldRef) ((JAssignStmt) u).getLeftOp();
 		Local rhs = (Local) ((JAssignStmt) u).getRightOp();
-		HashSet<ObjectNode> ptSet = (HashSet<ObjectNode>) ptg.vars.get(lhs.getBase());
-		if (ptSet == null) {
+		HashSet<ObjectNode> lhsObjSet = (HashSet<ObjectNode>) ptg.vars.get(lhs.getBase());
+		if (lhsObjSet == null) {
 			// the lhs.base must be a field variable.
 			// simply set rhs to escape
 			ptg.cascadeEscape(rhs, summary);
 			return;
-//			throw new IllegalArgumentException("[JAssignStmtHandler] ptset for "+lhs.getBase().toString()+" of "+u.toString()+" not found!");
 		}
 		// add field object for every parent object.
-		Set<ObjectNode> objSet = ptg.vars.get(rhs);
-		if (objSet == null) {
-			// rhs was probably set to null before this. Hence the points to set is not found.
-			// hence it needs to be set to an empty set!
-			// throw new IllegalArgumentException("[JAssignStmtHandler] ptset for "+rhs.toString()+" of "+u.toString()+" not found!");
-			ptSet.forEach(parent -> {
-				ptg.makeField(parent, lhs.getField(), new HashSet<>());
-			});
-		} else {
-			ptSet.forEach(parent -> {
-				ptg.makeField(parent, lhs.getField(), (Set<ObjectNode>) ((HashSet<ObjectNode>) objSet).clone());
-			});
+		Set<ObjectNode> rhsObjSet = ptg.vars.get(rhs);
+		if(AssignStmtHandler.STORE == UpdateType.STRONG){
+			ptg.STRONG_makeField((Local)lhs.getBase(), lhs.getField(), rhs);
 			ptg.propagateES((Local) lhs.getBase(), rhs, summary);
+		} else {
+			
 		}
 	}
 
@@ -126,7 +120,7 @@ public class StoreStmt {
 			System.out.println("At unit:" + u);
 			throw new IllegalArgumentException("Object received from factory is not of required type: internal");
 		}
-		ptg.makeField((Local) lhs.getBase(), lhs.getField(), obj);
+		ptg.WEAK_makeField((Local) lhs.getBase(), lhs.getField(), obj);
 		EscapeStatus es = new EscapeStatus();
 		if (obj instanceof InvalidBCIObjectNode) es.setEscape();
 		ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
