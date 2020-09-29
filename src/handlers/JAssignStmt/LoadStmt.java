@@ -1,11 +1,10 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.Escape;
 import es.EscapeStatus;
-import ptg.ArrayField;
-import ptg.ObjectNode;
-import ptg.ObjectType;
-import ptg.PointsToGraph;
+import ptg.*;
 import soot.Local;
 import soot.SootField;
 import soot.Unit;
@@ -43,7 +42,11 @@ public class LoadStmt {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
 		EscapeStatus es = new EscapeStatus(Escape.getInstance());
-		ptg.forcePutVar(lhs, obj);
+		if(AssignStmtHandler.LOAD == UpdateType.STRONG) {
+			ptg.forcePutVar(lhs, obj);
+		} else {
+			ptg.addVar(lhs, obj);
+		}
 		summary.put(obj, es);
 	}
 
@@ -62,15 +65,20 @@ public class LoadStmt {
 			 * 		escape status
 			 * }
 			 */
+			ObjectNode obj = ObjectNode.createObject(u, ObjectType.external);
 			if (ptg.containsField((Local) rhs.getBase(), rhs.getField())) {
 				// lhs it exists already
 				// assemble field objects
 				ptg.vars.put(lhs, ptg.assembleFieldObjects((Local) rhs.getBase(), rhs.getField()));
 				// TODO: that's all? no need for make field?
 			} else {
-				ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
-				ptg.addVar(lhs, obj);
-				ptg.WEAK_makeField((Local) rhs.getBase(), rhs.getField(), obj);
+				if(AssignStmtHandler.LOAD == UpdateType.STRONG){
+					ptg.STRONG_makeField((Local) rhs.getBase(), rhs.getField(), obj);
+					ptg.forcePutVar(lhs, obj);
+				} else {
+					ptg.WEAK_makeField((Local) rhs.getBase(), rhs.getField(), obj);
+					ptg.addVar(lhs, obj);
+				}
 
 				//assimilate parents' es
 				EscapeStatus parentsES = new EscapeStatus();
@@ -81,20 +89,18 @@ public class LoadStmt {
 				}
 				// make field
 				EscapeStatus es = parentsES.makeField(rhs.getField());
+				if(obj instanceof InvalidBCIObjectNode) es.setEscape();
 				summary.put(obj, es);
 			}
 		} else {
-			// might be a field variable, and hence has no definiton
+			// might be a field variable, and hence has no definition
+			// no need to do rhs.base -field> obj
 			// set to escape
-			ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.external);
+			ObjectNode obj = ObjectNode.createObject(u, ObjectType.external);
 			EscapeStatus es = new EscapeStatus(Escape.getInstance());
-			ptg.forcePutVar(lhs, obj);
+			if(AssignStmtHandler.LOAD==UpdateType.STRONG) ptg.forcePutVar(lhs, obj);
+			else ptg.addVar(lhs, obj);
 			summary.put(obj, es);
-			// lhs = obj done
-			// TODO: base.field = obj
-//			System.out.println(rhs.getBase() + " not found");
-//			System.out.println("Handler Panic at Load Stmt!!");
-//			throw new InvalidParameterException("Handler Panic at Load Stmt!!");
 		}
 	}
 
