@@ -18,7 +18,11 @@ import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JInstanceFieldRef;
 import utils.AnalysisError;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 
 /*
  * Meant to be only called by JAssignStmtHandler.
@@ -54,7 +58,7 @@ public class StoreStmt {
 		if (rhs instanceof StringConstant) {
 			storeStringConstantToInstanceFieldRefStmt(u, ptg, summary);
 		} else if (rhs instanceof NullConstant) {
-//			eraseFieldRefStmt(u, ptg, summary);
+			eraseFieldRefStmt(u, ptg, summary);
 		} else if (rhs instanceof Local) {
 			storeStmt(u, ptg, summary);
 		} else AnalysisError.unidentifiedAssignStmtCase(u);
@@ -89,17 +93,14 @@ public class StoreStmt {
 		Set<ObjectNode> rhsObjSet = ptg.vars.get(rhs);
 		if(AssignStmtHandler.STORE == UpdateType.STRONG){
 			ptg.STRONG_makeField((Local)lhs.getBase(), lhs.getField(), rhs);
-			ptg.propagateES((Local) lhs.getBase(), rhs, summary);
 		} else {
-			
+			ptg.WEAK_makeField((Local)lhs.getBase(), lhs.getField(), rhs);
 		}
+		ptg.propagateES((Local) lhs.getBase(), rhs, summary);
 	}
 
 	private static void StaticStoreStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
-		Iterator<ObjectNode> it = ptg.reachables((Local) ((JAssignStmt) u).getRightOp()).iterator();
-		while (it.hasNext()) {
-			summary.get(it.next()).setEscape();
-		}
+		ptg.cascadeEscape((Local) ((JAssignStmt) u).getRightOp(), summary);
 	}
 
 	private static void storeClassConstantToArrayRef(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
@@ -120,15 +121,18 @@ public class StoreStmt {
 			System.out.println("At unit:" + u);
 			throw new IllegalArgumentException("Object received from factory is not of required type: internal");
 		}
-		ptg.WEAK_makeField((Local) lhs.getBase(), lhs.getField(), obj);
+		if(AssignStmtHandler.STORE == UpdateType.STRONG) {
+			ptg.STRONG_makeField((Local) lhs.getBase(), lhs.getField(), obj);
+		} else {
+			ptg.WEAK_makeField((Local) lhs.getBase(), lhs.getField(), obj);
+		}
 		EscapeStatus es = new EscapeStatus();
 		if (obj instanceof InvalidBCIObjectNode) es.setEscape();
-		ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
+		if(!es.containsNoEscape()) ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
 		summary.put(obj, es);
 	}
 
-	private static void storeStringConstantToArrayRefStmt(Unit u, PointsToGraph ptg,
-														  HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void storeStringConstantToArrayRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = ObjectFactory.getObj(u);
 		if (obj.type != ObjectType.internal) {
@@ -137,21 +141,15 @@ public class StoreStmt {
 		ptg.storeStmtArrayRef((Local) lhs.getBase(), obj);
 		EscapeStatus es = new EscapeStatus();
 		if (obj instanceof InvalidBCIObjectNode) es.setEscape();
-		ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
+		if(!es.containsNoEscape()) ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
 		summary.put(obj, es);
 	}
 
 	private static void lhsArrayRef(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef) ((JAssignStmt) u).getLeftOp();
 		Local rhs = (Local) ((JAssignStmt) u).getRightOp();
-
-		try {
-			ptg.storeStmtArrayRef((Local) lhs.getBase(), rhs);
-			ptg.propagateES((Local) lhs.getBase(), rhs, summary);
-		} catch (Exception e) {
-			System.out.println(e);
-			throw new IllegalArgumentException(lhs.getBase().toString() + " probably could not be cast to Local at " + u.toString());
-		}
+		ptg.storeStmtArrayRef((Local) lhs.getBase(), rhs);
+		ptg.propagateES((Local) lhs.getBase(), rhs, summary);
 	}
 
 	private static void eraseFieldRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {

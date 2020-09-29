@@ -53,6 +53,18 @@ public class PointsToGraph {
 		vars.put(l, s);
 	}
 
+	public void STRONG_makeField(Local lhs , SootField f, ObjectNode obj) {
+		Set<ObjectNode> ptSet = vars.get(lhs);
+		if (ptSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		ptSet.forEach(parent -> STRONG_makeField(parent, f, obj));
+	}
+
+	public void STRONG_makeField(ObjectNode parent, SootField f, ObjectNode child) {
+		Set<ObjectNode> s = new HashSet<>();
+		s.add(child);
+		STRONG_makeField(parent, f, s);
+	}
+
 	public void STRONG_makeField(ObjectNode obj, SootField f, Set<ObjectNode> objSet) {
 		Map<SootField, Set<ObjectNode>> fieldMap = null;
 		if (!fields.containsKey(obj)) {
@@ -74,6 +86,16 @@ public class PointsToGraph {
 		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
 		for(ObjectNode parent : lhsPtSet) {
 			STRONG_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
+		}
+	}
+
+	public void WEAK_makeField(Local lhs, SootField f, Local rhs) {
+		Set<ObjectNode> lhsPtSet = vars.get(lhs);
+		if (lhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		Set<ObjectNode> rhsPtSet = vars.get(rhs);
+		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		for(ObjectNode parent : lhsPtSet) {
+			WEAK_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
 		}
 	}
 
@@ -100,12 +122,7 @@ public class PointsToGraph {
 	public void WEAK_makeField(Local l, SootField f, ObjectNode child) {
 		Set<ObjectNode> ptSet = vars.get(l);
 		if (ptSet == null) throw new IllegalArgumentException("Pts-to set for " + l + " doesn't exist!");
-		Iterator<ObjectNode> it = ptSet.iterator();
-		while (it.hasNext()) {
-			ObjectNode obj = it.next();
-//			System.out.println(obj + f.toString() + child);
-			WEAK_makeField(obj, f, child);
-		}
+		ptSet.forEach(parent -> WEAK_makeField(parent, f, child));
 	}
 
 	public Iterable<ObjectNode> reachables(Local l) {
