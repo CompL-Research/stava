@@ -42,15 +42,25 @@ public class PointsToGraph {
 		}
 	}
 
-	public void forcePutVar(Local l, ObjectNode obj) {
-		// tiny optimization to prevent creation of unnecessary new objects
+	public void addVar(Local l, Set<ObjectNode> s){
 		if (vars.containsKey(l)) {
-			Set<ObjectNode> objectNodes = vars.get(l);
-			if (objectNodes.size() == 1 && objectNodes.contains(obj)) return;
+			vars.get(l).addAll(s);
+		} else {
+			Set<ObjectNode> objects = new HashSet<ObjectNode>();
+			objects.addAll(s);
+			vars.put(l, objects);
 		}
+	}
+
+	public void forcePutVar(Local l, ObjectNode obj) {
 		Set<ObjectNode> s = new HashSet<>();
 		s.add(obj);
 		vars.put(l, s);
+	}
+	public void forcePutVar(Local l, Set<ObjectNode> s) {
+		Set<ObjectNode> q = new HashSet<>();
+		q.addAll(s);
+		vars.put(l, q);
 	}
 
 	public void STRONG_makeField(Local lhs , SootField f, ObjectNode obj) {

@@ -1,11 +1,10 @@
 package handlers.JAssignStmt;
 
+import config.AssignStmtHandler;
+import config.UpdateType;
 import es.Escape;
 import es.EscapeStatus;
-import ptg.ArrayField;
-import ptg.ObjectNode;
-import ptg.ObjectType;
-import ptg.PointsToGraph;
+import ptg.*;
 import soot.Local;
 import soot.SootField;
 import soot.Unit;
@@ -19,6 +18,7 @@ import utils.getBCI;
 
 import java.security.InvalidParameterException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -43,7 +43,11 @@ public class LoadStmt {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
 		EscapeStatus es = new EscapeStatus(Escape.getInstance());
-		ptg.forcePutVar(lhs, obj);
+		if(AssignStmtHandler.LOAD == UpdateType.STRONG) {
+			ptg.forcePutVar(lhs, obj);
+		} else {
+			ptg.addVar(lhs, obj);
+		}
 		summary.put(obj, es);
 	}
 
@@ -68,9 +72,14 @@ public class LoadStmt {
 				ptg.vars.put(lhs, ptg.assembleFieldObjects((Local) rhs.getBase(), rhs.getField()));
 				// TODO: that's all? no need for make field?
 			} else {
-				ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
-				ptg.addVar(lhs, obj);
-				ptg.WEAK_makeField((Local) rhs.getBase(), rhs.getField(), obj);
+				ObjectNode obj = ObjectNode.createObject(u, ObjectType.external);
+				if(AssignStmtHandler.LOAD == UpdateType.STRONG){
+					ptg.forcePutVar(lhs, obj);
+				} else {
+					ptg.addVar(lhs, obj);
+				}
+				// This is strong only as the field does not exist for the
+				ptg.STRONG_makeField((Local) rhs.getBase(), rhs.getField(), obj);
 
 				//assimilate parents' es
 				EscapeStatus parentsES = new EscapeStatus();
@@ -81,20 +90,18 @@ public class LoadStmt {
 				}
 				// make field
 				EscapeStatus es = parentsES.makeField(rhs.getField());
+				if(obj instanceof InvalidBCIObjectNode) es.setEscape();
 				summary.put(obj, es);
 			}
 		} else {
-			// might be a field variable, and hence has no definiton
+			// might be a field variable, and hence has no definition
+			// no need to do rhs.base -field> obj
 			// set to escape
-			ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.external);
+			ObjectNode obj = ObjectNode.createObject(u, ObjectType.external);
 			EscapeStatus es = new EscapeStatus(Escape.getInstance());
-			ptg.forcePutVar(lhs, obj);
+			if(AssignStmtHandler.LOAD==UpdateType.STRONG) ptg.forcePutVar(lhs, obj);
+			else ptg.addVar(lhs, obj);
 			summary.put(obj, es);
-			// lhs = obj done
-			// TODO: base.field = obj
-//			System.out.println(rhs.getBase() + " not found");
-//			System.out.println("Handler Panic at Load Stmt!!");
-//			throw new InvalidParameterException("Handler Panic at Load Stmt!!");
 		}
 	}
 
@@ -108,21 +115,21 @@ public class LoadStmt {
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		JArrayRef arrayRef = (JArrayRef) rhs;
 		Value base = arrayRef.getBase();
+
 		if (!ptg.vars.containsKey(base)) {
 			// The base might be a field variable for the object.
 			ObjectNode obj = new ObjectNode(utils.getBCI.get(u), ObjectType.external);
 			ptg.forcePutVar(lhs, obj);
 			summary.put(obj, new EscapeStatus(Escape.getInstance()));
 			return;
-//			throw new AnalyserPanicException("Points-to set for "+base.toString()+" doesn't exist!");
 		}
 
 		Set<ObjectNode> objs = ptg.vars.get(base);
-		ObjectNode internalobj = new ObjectNode(getBCI.get(u), ObjectType.internal);
-		ObjectNode externalobj = new ObjectNode(getBCI.get(u), ObjectType.external);
+		ObjectNode internalobj = ObjectNode.createObject(u, ObjectType.internal);
+		ObjectNode externalobj = ObjectNode.createObject(u, ObjectType.external);
 
 		Iterator<ObjectNode> iterator = objs.iterator();
-
+		Set<ObjectNode> s = new HashSet<>();
 		SootField f = ArrayField.instance;
 		while (iterator.hasNext()) {
 			ObjectNode parent = iterator.next();
@@ -148,11 +155,12 @@ public class LoadStmt {
 				summary.put(child, es);
 			}
 
-			if (ptg.vars.containsKey(lhs) && !ptg.vars.get(lhs).contains(child)) {
-				ptg.vars.get(lhs).add(child);
-			} else {
-				ptg.forcePutVar(lhs, child);
-			}
+			s.add(child);
+		}
+		if(AssignStmtHandler.LOAD == UpdateType.STRONG) {
+			ptg.forcePutVar(lhs, s);
+		} else {
+			ptg.addVar(lhs, s);
 		}
 	}
 
