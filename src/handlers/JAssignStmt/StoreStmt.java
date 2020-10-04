@@ -169,7 +169,6 @@ public class StoreStmt {
 				Map<SootField, Set<ObjectNode>> map = ptg.fields.get(obj);
 				if (map.containsKey(lhs.getField())) {
 					map.get(lhs.getField()).clear();
-					map.remove(lhs.getField());
 				}
 			}
 		}
