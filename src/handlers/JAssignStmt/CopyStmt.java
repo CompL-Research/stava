@@ -34,9 +34,15 @@ public class CopyStmt {
 	private static void rhsCastExpr(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
 		// TODO: put a check for cast to a runnable class.
 		// a = (Cast?)b
+		Local lhs = (Local)((JAssignStmt)u).getLeftOp();
 		Value op = ((JCastExpr) ((JAssignStmt) u).getRightOp()).getOp();
 		// a = (Cast) null;
-		if (op instanceof NullConstant) return;
+		if (op instanceof NullConstant) {
+			if(AssignStmtHandler.ERASE == UpdateType.STRONG || !ptg.vars.containsKey(lhs)){
+				ptg.vars.put((Local)lhs, new HashSet<ObjectNode>());
+			}
+			return;
+		}
 		Local rhs;
 		try {
 			rhs = (Local) op;

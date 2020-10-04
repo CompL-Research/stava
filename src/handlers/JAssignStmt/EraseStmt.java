@@ -24,10 +24,9 @@ public class EraseStmt {
 		if (lhs instanceof StaticFieldRef) {
 			// Ignore - [Verified]
 		} else if (lhs instanceof Local) {
-			if(AssignStmtHandler.ERASE == UpdateType.STRONG && ptg.vars.containsKey(lhs)) {
-				ptg.vars.get(lhs).clear(); // avoids creation of unnecessary new object
+			if(AssignStmtHandler.ERASE == UpdateType.STRONG || !ptg.vars.containsKey(lhs)){
+				ptg.vars.put((Local)lhs, new HashSet<ObjectNode>());
 			}
-			if(!ptg.vars.containsKey(lhs)) ptg.vars.put((Local)lhs, new HashSet<ObjectNode>());
 		} else {
 			utils.AnalysisError.unidentifiedAssignStmtCase(u);
 		}
