@@ -292,15 +292,18 @@ public class PointsToGraph {
 
 	public void propagateES(Local lhs, Local rhs, Map<ObjectNode, EscapeStatus> summary) {
 		EscapeStatus es1 = new EscapeStatus();
-		vars.get(lhs).forEach(parent -> es1.addEscapeStatus(summary.get(parent)));
-//		es = es.makeFalseClone();
+		for (ObjectNode parent : vars.get(lhs)) {
+			es1.addEscapeStatus(summary.get(parent));
+		}
 		EscapeStatus es2 = es1.makeFalseClone();
 		Set<ObjectNode> done = new HashSet<>();
-		if (vars.containsKey(rhs)) vars.get(rhs).forEach(obj -> {
-			summary.get(obj).addEscapeStatus(es2);
-			recursivePropagateES(obj, es2, summary, done);
-			done.add(obj);
-		});
+		if (vars.containsKey(rhs)) {
+			for (ObjectNode obj : vars.get(rhs)) {
+				summary.get(obj).addEscapeStatus(es2);
+				recursivePropagateES(obj, es2, summary, done);
+				done.add(obj);
+			}
+		}
 	}
 
 	public void recursivePropagateES(ObjectNode obj, EscapeStatus es, Map<ObjectNode, EscapeStatus> summary, Set<ObjectNode> done) {
@@ -309,15 +312,16 @@ public class PointsToGraph {
 		HashSet<ObjectNode> children = new HashSet<ObjectNode>();
 		Map<SootField, Set<ObjectNode>> map = fields.get(obj);
 		map.forEach((f, set) -> {
-			set.forEach(o -> {
+			for (ObjectNode o : set) {
 				summary.get(o).addEscapeStatus(es);
 				children.add(o);
-			});
+			}
 		});
 		done.add(obj);
 		children.remove(obj);
-		children.forEach(child -> recursivePropagateES(child, es, summary, done));
-
+		for (ObjectNode child : children) {
+			recursivePropagateES(child, es, summary, done);
+		}
 	}
 
 	public void setAsReturn(Local l, Map<ObjectNode, EscapeStatus> summary) {

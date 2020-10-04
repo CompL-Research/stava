@@ -128,7 +128,11 @@ public class StoreStmt {
 		}
 		EscapeStatus es = new EscapeStatus();
 		if (obj instanceof InvalidBCIObjectNode) es.setEscape();
-		if(!es.containsNoEscape()) ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
+		if(!es.containsNoEscape()) {
+			for (ObjectNode parent : ptg.vars.get(lhs.getBase())) {
+				es.addEscapeStatus(summary.get(parent));
+			}
+		}
 		summary.put(obj, es);
 	}
 
@@ -141,7 +145,11 @@ public class StoreStmt {
 		ptg.storeStmtArrayRef((Local) lhs.getBase(), obj);
 		EscapeStatus es = new EscapeStatus();
 		if (obj instanceof InvalidBCIObjectNode) es.setEscape();
-		if(!es.containsNoEscape()) ptg.vars.get(lhs.getBase()).forEach(parent -> es.addEscapeStatus(summary.get(parent)));
+		if(!es.containsNoEscape()) {
+			for (ObjectNode parent : ptg.vars.get(lhs.getBase())) {
+				es.addEscapeStatus(summary.get(parent));
+			}
+		}
 		summary.put(obj, es);
 	}
 
@@ -153,9 +161,10 @@ public class StoreStmt {
 	}
 
 	private static void eraseFieldRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+		if(AssignStmtHandler.STORE==UpdateType.WEAK) return;
 		JInstanceFieldRef lhs = (JInstanceFieldRef) ((JAssignStmt) u).getLeftOp();
 		if (!ptg.vars.containsKey(lhs.getBase())) return;
-		ptg.vars.get(lhs.getBase()).forEach(obj -> {
+		for (ObjectNode obj : ptg.vars.get(lhs.getBase())) {
 			if (ptg.fields.containsKey(obj)) {
 				Map<SootField, Set<ObjectNode>> map = ptg.fields.get(obj);
 				if (map.containsKey(lhs.getField())) {
@@ -163,6 +172,6 @@ public class StoreStmt {
 					map.remove(lhs.getField());
 				}
 			}
-		});
+		}
 	}
 }
