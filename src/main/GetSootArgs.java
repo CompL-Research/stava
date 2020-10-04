@@ -15,47 +15,52 @@ public class GetSootArgs {
 			// this is a benchmark
 			if (args[3].contains("Harness")) {
 				// the benchmark is dacapo
-				String dir = args[2] + "/out";
-				String refl_log = "reflection-log:" + dir + "/refl.log";
-				String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
-				String[] sootArgs = {
-						// "-whole-program",
-						"-app",
-						"-allow-phantom-refs",
-						"-keep-bytecode-offset",
-						"-keep-offset",
-						"-soot-classpath", cp, "-prepend-classpath",
-						"-keep-line-number",
-						"-main-class", args[3],
-						"-process-dir", dir,
-						"-p", "cg", refl_log,
-						"-output-dir", args[4],
-						"-output-format", "jimple",
-						"-include", "org.apache.",
-						"-include", "org.w3c."
-				};
-				return sootArgs;
+				return dacapo(args);
+			} else {
+				return normal(args);
 			}
 		} else {
 			// this is a standard application
-			String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
-			String[] sootArgs = {
-					// "-whole-program",
-					"-app",
-					"-allow-phantom-refs",
-					"-keep-bytecode-offset",
-					"-keep-offset",
-					"-soot-classpath", cp, "-prepend-classpath",
-					"-keep-line-number",
-					"-main-class", args[3],
-					"-process-dir", args[2],
-					"-output-dir", args[4],
-					"-output-format", "jimple",
-			};
-			return sootArgs;
-
+			return normal(args);
 		}
-
-		return null;
+	}
+	private String[] dacapo(String[] args){
+		String dir = args[2] + "/out";
+		String refl_log = "reflection-log:" + dir + "/refl.log";
+		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String[] sootArgs = {
+				// "-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-keep-offset",
+				"-soot-classpath", cp, "-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				"-process-dir", dir,
+				"-p", "cg", refl_log,
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+				"-include", "org.apache.",
+				"-include", "org.w3c."
+		};
+		return sootArgs;
+	}
+	private String[] normal(String[] args){
+		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
+		String[] sootArgs = {
+				// "-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-keep-offset",
+				"-soot-classpath", cp, "-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				"-process-dir", args[2],
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+		};
+		return sootArgs;
 	}
 }
