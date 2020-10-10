@@ -9,6 +9,7 @@ public class ObjectNode {
 	public final int ref;
 	// an enumeration to store the type of Object
 	public final ObjectType type;
+
 	// anyway the fields of ObjectNode are non modifiable. 
 	public final int hashcode;
 
@@ -39,6 +40,7 @@ public class ObjectNode {
 	public String toString() {
 		return "<" + type.toString() + "," + ref + ">";
 	}
+
 
 	public static ObjectNode createObject(Unit u, ObjectType type){
 		ObjectNode _ret = null;

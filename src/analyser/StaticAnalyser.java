@@ -8,6 +8,7 @@ import soot.*;
 import soot.jimple.MonitorStmt;
 import soot.jimple.internal.*;
 import soot.toolkits.graph.BriefUnitGraph;
+import soot.toolkits.graph.ExceptionalUnitGraph;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,10 +31,10 @@ public class StaticAnalyser extends BodyTransformer {
 	@Override
 	protected void internalTransform(Body body, String phasename, Map<String, String> options) {
 		boolean verboseFlag = false;
-//		if(body.getMethod().getBytecodeSignature().equals("<jdk.internal.event.EventHelper$toString__1: apply(I)Ljava/lang/Object;>")) {
+//		if(body.getMethod().getBytecodeSignature().equals("<org.sunflow.SunflowAPI: parameter(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[F)V>")) {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
-//		} 
+//		}
 		String path = Scene.v().getSootClassPath();
 //		System.out.println(path);
 //		System.out.println("Package:"+body.getMethod().getDeclaringClass().getJavaPackageName());
@@ -48,7 +49,7 @@ public class StaticAnalyser extends BodyTransformer {
 		// The flowSets
 		Map<Unit, FlowSet> flowSets = new LinkedHashMap<>(units.size());
 
-		BriefUnitGraph cfg = new BriefUnitGraph(body);
+		ExceptionalUnitGraph cfg = new ExceptionalUnitGraph(body);
 
 		LinkedHashSet<Unit> workList = new LinkedHashSet<Unit>();
 		LinkedHashSet<Unit> workListNext = new LinkedHashSet<Unit>(units);
@@ -62,15 +63,14 @@ public class StaticAnalyser extends BodyTransformer {
 		while (!workListNext.isEmpty()) {
 			if (verboseFlag) {
 				System.out.println("Loop " + i);
-//				System.out.println("Worklist:");
-//				workList.forEach(w -> System.out.println(w));
+				System.out.println("Worklist:");
+				workList.forEach(w -> System.out.println(w));
 				System.out.println("WorkListNext:");
 				workListNext.forEach(w -> System.out.println(w));
 			}
 			/*
 			 * Swap workList and workListNext
 			 */
-//			if(body.getMethod().toString().contains("visitMaxs")) System.out.println("[Loop:"+i+"]:"+printList(workListNext));
 			temp = workList;
 			workList = workListNext;
 			workListNext = temp;
@@ -89,7 +89,7 @@ public class StaticAnalyser extends BodyTransformer {
 			Iterator<Unit> iterator = workList.iterator();
 			while (iterator.hasNext()) {
 				Unit u = iterator.next();
-//				if(verboseFlag) System.out.println("Unit: "+u);
+				if(verboseFlag) System.out.println("Unit: "+u);
 				iterator.remove();
 				workListNext.remove(u);
 				FlowSet flowSet = flowSets.get(u);
@@ -98,6 +98,9 @@ public class StaticAnalyser extends BodyTransformer {
 				 */
 				PointsToGraph inNew = new PointsToGraph();
 				for (Unit pred : cfg.getPredsOf(u)) {
+//					if(u.toString().contains("$r14 := @caughtexception")){
+//						System.out.println("Predecessor of our unit is:"+pred);
+//					}
 					inNew.union(flowSets.get(pred).getOut());
 				}
 				if (inNew.equals(flowSet.getIn()) && !inNew.isEmpty()) {
@@ -116,17 +119,18 @@ public class StaticAnalyser extends BodyTransformer {
 				} catch (Exception e) {
 					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
 					System.out.println(s);
-//					System.out.println("outNew:"+outNew);
-//					System.out.println("body:"+body);
-//					System.out.println("summary:"+summary);
+					System.out.println("inNew:"+inNew);
+					System.out.println("outNew:"+outNew);
+					System.out.println("body:"+body);
+					System.out.println("summary:"+summary);
 //					System.out.println(workList);
 					throw e;
 				}
-//				if(verboseFlag) {	
-//					System.out.println("at: "+u.toString());
-//					System.out.println("inNew:"+inNew.toString());
-//					System.out.println("outNew:"+outNew.toString());
-//				}
+				if(verboseFlag) {
+					System.out.println("at: "+u.toString());
+					System.out.println("inNew:"+inNew.toString());
+					System.out.println("outNew:"+outNew.toString());
+				}
 //				if(bci == 135) {
 //					System.out.println("outNew:"+outNew);
 //				}
@@ -155,12 +159,12 @@ public class StaticAnalyser extends BodyTransformer {
 //		Analysis currentAnalysis = new Analysis(flowSets, summary);
 //		analysis.put(body, currentAnalysis);
 //		String output = body.getMethod().getSignature()+"\n"+currentAnalysis.toString();
-		
+
 		/*
-		 * 
-		
+		 *
+
 		try {
-			Files.write(p, output.getBytes(StandardCharsets.UTF_8), 
+			Files.write(p, output.getBytes(StandardCharsets.UTF_8),
 					Files.exists(p) ? StandardOpenOption.APPEND : StandardOpenOption.CREATE);
 		} catch (IOException e) {
 			e.printStackTrace();

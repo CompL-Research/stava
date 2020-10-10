@@ -19,12 +19,17 @@ public class SummaryResolver {
 		this.existingSummaries = existingSummaries;
 		resolutionStatus = new HashMap<SootMethod, HashMap<ObjectNode, ResolutionStatus>>();
 		this.solvedSummaries = new HashMap<>();
-		existingSummaries.forEach((body, map) -> {
+		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : existingSummaries.entrySet()) {
+			SootMethod method = entry.getKey();
+			HashMap<ObjectNode, EscapeStatus> map = entry.getValue();
 			HashMap<ObjectNode, ResolutionStatus> q = new HashMap<>();
-			map.forEach((obj, es) -> q.put(obj, ResolutionStatus.UnAttempted));
-			resolutionStatus.put(body, q);
-			this.solvedSummaries.put(body, new HashMap<>());
-		});
+			for (Map.Entry<ObjectNode, EscapeStatus> e : map.entrySet()) {
+				ObjectNode obj = e.getKey();
+				q.put(obj, ResolutionStatus.UnAttempted);
+			}
+			resolutionStatus.put(method, q);
+			this.solvedSummaries.put(method, new HashMap<>());
+		}
 
 	}
 
@@ -32,14 +37,17 @@ public class SummaryResolver {
 						HashMap<SootMethod, PointsToGraph> ptgs) {
 		init(existingSummaries);
 		this.ptgs = ptgs;
-		existingSummaries.forEach((method, summary) -> {
-//			System.out.println("--- <"+method.toString()+"> ---");
-			summary.forEach((obj, es) -> {
-//				System.out.println("normal trigger outOfContextSolve on: "+method.toString()+", "+obj.toString());
+		//			System.out.println("--- <"+method.toString()+"> ---");
+		//			System.out.println("--- </"+method.toString()+"> ---");
+		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : existingSummaries.entrySet()) {
+			SootMethod method = entry.getKey();
+			HashMap<ObjectNode, EscapeStatus> summary = entry.getValue();
+			//				System.out.println("normal trigger outOfContextSolve on: "+method.toString()+", "+obj.toString());
+			for (Map.Entry<ObjectNode, EscapeStatus> e : summary.entrySet()) {
+				ObjectNode obj = e.getKey();
 				outOfContextSolve(obj, method);
-			});
-//			System.out.println("--- </"+method.toString()+"> ---");
-		});
+			}
+		}
 //		printResults();
 	}
 
@@ -54,6 +62,10 @@ public class SummaryResolver {
 			return;
 		}
 		resolutionStatus.get(method).put(obj, ResolutionStatus.InProgress);
+		if(!existingSummaries.containsKey(method)){
+			System.out.println("existingSummaries has no entry for "+method);
+			throw new RuntimeException("Could not find entry for "+method+" in existingSummaries");
+		}
 		EscapeStatus es = this.existingSummaries.get(method).get(obj);
 		if (es.containsNoEscape() || es.doesEscape()) {
 //			System.out.println(obj.toString() + " of "+ method.toString() + " is already resolved to "+ es.toString());
@@ -96,6 +108,12 @@ public class SummaryResolver {
 			EscapeStatus temp = new EscapeStatus();
 			while (i.hasNext()) {
 				ObjectNode o = i.next();
+				if(!resolutionStatus.containsKey(m)){
+					System.out.println("resolutionStatus has no entry for "+m);
+					if(existingSummaries.containsKey(m))
+						System.out.println("Funnily, existing summaries does have an entry for it.");
+					throw new RuntimeException("Could not find entry for "+m+" in resolutionStatus");
+				}
 				ResolutionStatus s = resolutionStatus.get(m).get(o);
 				if (s == ResolutionStatus.UnAttempted) {
 //					System.out.println("helper trigger outofcontextsolve on "+o.toString()+" of "+m.toString());
@@ -247,12 +265,15 @@ public class SummaryResolver {
 	private boolean libMethodCheck(SootMethod m) {
 		String methodName = m.getName();
 		String className = m.getDeclaringClass().getName();
+		if(className.startsWith("java")) return true;
 		if (className.equals("java.lang.Object")) {
 			if (methodName.equals("<init>")) return true;
 		} else if (className.equals("java.lang.Integer")) {
 			if (methodName.equals("<init>")) return true;
 		} else if (className.equals("java.io.PrintStream")) {
 			if (methodName.equals("println")) return true;
+		} else if (className.equals("java.lang.StringBuilder")){
+			if (methodName.equals("append")) return true;
 		}
 		if (m.isJavaLibraryMethod()) {
 			System.out.println("Unrecognised Library Method");

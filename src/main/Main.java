@@ -4,10 +4,12 @@ import analyser.StaticAnalyser;
 import es.EscapeStatus;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
+import resolver.SummaryResolver;
 import soot.PackManager;
 import soot.SootMethod;
 import soot.Transform;
 import utils.GetListOfNoEscapeObjects;
+import utils.Stats;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -16,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
+import java.util.Map;
 
 
 public class Main {
@@ -31,37 +34,31 @@ public class Main {
 		}
 		StaticAnalyser staticAnalyser = new StaticAnalyser();
 		PackManager.v().getPack("jtp").add(new Transform("jtp.sample", staticAnalyser));
-//		long analysis_start = System.currentTimeMillis();
+		long analysis_start = System.currentTimeMillis();
 		soot.Main.main(sootArgs);
-//		long analysis_end = System.currentTimeMillis();
+		long analysis_end = System.currentTimeMillis();
 		System.out.println("Static Analysis is done!");
+		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
-
-//		staticAnalyser.printAnalysis();
-
-//		printResForJVM(StaticAnalyser.summaries, "/home/nikhil/MTP/benchmarks/out", "/home/nikhil/MTP/soot_output_dir/dacapo");
-//		printResForJVM(StaticAnalyser.summaries, args[1], args[3]);
-		printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, args[4]);
-		/*
 		SummaryResolver sr = new SummaryResolver();
 		long res_start = System.currentTimeMillis();
 		sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
 		long res_end = System.currentTimeMillis();
-		System.out.println(args[3]);
-		System.out.print("Unresolved: ");
-		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
-		System.out.println(new Stats(StaticAnalyser.summaries));
-		System.out.print("Resolved: ");
+		System.out.println("Resolution is done");
 		System.out.println("Time Taken:"+(res_end-res_start)/1000F);
-		System.out.println(new Stats(sr.solvedSummaries));
-		*/
+		printAllInfo(StaticAnalyser.ptgs, sr.solvedSummaries, args[4]);
+		saveStats(sr, args[4]);
+
+		printResForJVM(sr.solvedSummaries, args[2], args[4]);
 	}
 
 	private static void printAllInfo(HashMap<SootMethod, PointsToGraph> ptgs,
 									 HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String opDir) {
 
 		Path p_opDir = Paths.get(opDir);
-		ptgs.forEach((method, ptg) -> {
+		for (Map.Entry<SootMethod, PointsToGraph> entry : ptgs.entrySet()) {
+			SootMethod method = entry.getKey();
+			PointsToGraph ptg = entry.getValue();
 			Path p_opFile = Paths.get(p_opDir.toString() + "/" + method.getDeclaringClass().toString() + ".info");
 //			System.out.println("Method "+method.toString()+" appends to "+p_opFile);
 			StringBuilder output = new StringBuilder();
@@ -78,7 +75,7 @@ public class Main {
 				System.out.println("Unable to write info of " + method.toString() + " to file " + p_opFile.toString());
 				e.printStackTrace();
 			}
-		});
+		}
 	}
 
 	static void printResForJVM(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
@@ -91,21 +88,41 @@ public class Main {
 //		System.out.println(p_opFile);
 		// String Builder
 		StringBuilder sb = new StringBuilder();
-		summaries.forEach((method, summary) -> {
+		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : summaries.entrySet()) {
+			SootMethod method = entry.getKey();
+			HashMap<ObjectNode, EscapeStatus> summary = entry.getValue();
 			sb.append(method.getBytecodeSignature());
 			sb.append(GetListOfNoEscapeObjects.get(summary));
 			sb.append("\n");
-		});
+		}
 		try {
-
 			System.out.println("Trying to write to:" + p_opFile);
 			Files.write(p_opFile, sb.toString().getBytes(StandardCharsets.UTF_8),
 					Files.exists(p_opFile) ? StandardOpenOption.APPEND : StandardOpenOption.CREATE);
-			System.out.println("Unresolved results have been written.");
+			System.out.println("Results have been written.");
 		} catch (IOException e) {
-			System.out.println("There is an IO exception");
+			System.out.println("There is an exception"+e);
 			e.printStackTrace();
 		}
+	}
+
+	static void saveStats(SummaryResolver sr, String opDir){
+		Stats beforeResolution = new Stats(sr.existingSummaries);
+		Stats afterResolution = new Stats(sr.solvedSummaries);
+		Path p_opFile = Paths.get(opDir + "/stats.txt");
+		StringBuilder sb = new StringBuilder();
+		sb.append("Before resolution:\n"+beforeResolution);
+		sb.append("\nAfter resolution:\n"+afterResolution);
+		try {
+			System.out.println("Trying to write to:" + p_opFile);
+			Files.write(p_opFile, sb.toString().getBytes(StandardCharsets.UTF_8),
+					Files.exists(p_opFile) ? StandardOpenOption.APPEND : StandardOpenOption.CREATE);
+			System.out.println("Stats have been written.");
+		} catch (IOException e) {
+			System.out.println("There is an exception"+e);
+			e.printStackTrace();
+		}
+
 	}
 
 }
