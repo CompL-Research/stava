@@ -77,7 +77,19 @@ public class Main {
 			}
 		}
 	}
-
+	static String transformFuncSignature(String inputString) {
+		StringBuilder finalString = new StringBuilder();
+		for(int i=1;i<inputString.length()-1;i++) {
+			if(inputString.charAt(i) == '.')
+				finalString.append('/');
+			else if(inputString.charAt(i) == ':')
+				finalString.append('.');
+			else if(inputString.charAt(i) == ' ')
+				continue;
+			else finalString.append(inputString.charAt(i));
+		}
+		return finalString.toString();
+	}
 	static void printResForJVM(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
 		// Open File
 		Path p_ipDir = Paths.get(ipDir);
@@ -91,7 +103,8 @@ public class Main {
 		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : summaries.entrySet()) {
 			SootMethod method = entry.getKey();
 			HashMap<ObjectNode, EscapeStatus> summary = entry.getValue();
-			sb.append(method.getBytecodeSignature());
+			sb.append(transformFuncSignature(method.getBytecodeSignature()));
+			sb.append(" ");
 			sb.append(GetListOfNoEscapeObjects.get(summary));
 			sb.append("\n");
 		}
