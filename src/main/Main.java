@@ -20,9 +20,10 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 
+import static utils.KillCallerOnly.kill;
+
 
 public class Main {
-	static HashMap<String, String> paths = new HashMap<>();
 
 	public static void main(String[] args) {
 
@@ -46,8 +47,9 @@ public class Main {
 		long res_end = System.currentTimeMillis();
 		System.out.println("Resolution is done");
 		System.out.println("Time Taken:"+(res_end-res_start)/1000F);
-		printAllInfo(StaticAnalyser.ptgs, sr.solvedSummaries, args[4]);
-		saveStats(sr, args[4]);
+		HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = kill(sr.solvedSummaries);
+		printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+		saveStats(sr.existingSummaries, resolved, args[4]);
 
 		printResForJVM(sr.solvedSummaries, args[2], args[4]);
 	}
@@ -85,8 +87,6 @@ public class Main {
 
 		Path p_opFile = Paths.get(p_opDir.toString() + "/" + p_ipDir.getFileName() + ".res");
 
-//		System.out.println(p_opFile);
-		// String Builder
 		StringBuilder sb = new StringBuilder();
 		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : summaries.entrySet()) {
 			SootMethod method = entry.getKey();
@@ -106,9 +106,12 @@ public class Main {
 		}
 	}
 
-	static void saveStats(SummaryResolver sr, String opDir){
-		Stats beforeResolution = new Stats(sr.existingSummaries);
-		Stats afterResolution = new Stats(sr.solvedSummaries);
+	static void saveStats(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> unresolved,
+						  HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>>resolved,
+						  String opDir) {
+		Stats beforeResolution = new Stats(unresolved);
+		System.out.println("calculating stats for solvedsummaries");
+		Stats afterResolution = new Stats(resolved);
 		Path p_opFile = Paths.get(opDir + "/stats.txt");
 		StringBuilder sb = new StringBuilder();
 		sb.append("Before resolution:\n"+beforeResolution);
