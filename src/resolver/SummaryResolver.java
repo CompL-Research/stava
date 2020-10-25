@@ -95,6 +95,9 @@ public class SummaryResolver {
 								: ResolutionStatus.UnResolved)
 						: ResolutionStatus.Resolved);
 //		System.out.println(obj.toString()+" of "+method.toString()+" resolves to "+es.toString()+" with status "+resolutionStatus.get(method).get(obj));
+//		if( obj.type==ObjectType.internal && resolutionStatus.get(method).get(obj)==ResolutionStatus.UnResolved){
+//			System.out.println("Object:"+obj+" of method:"+method+" is unresolved");
+//		}
 	}
 
 	private EscapeState resolutionHelper(ConditionalValue cv, ObjectNode obj, SootMethod method) {
@@ -103,6 +106,7 @@ public class SummaryResolver {
 			if (m.isJavaLibraryMethod()) {
 				if (libMethodCheck(m)) return NoEscape.getInstance();
 				else return cv;
+//				return cv;
 			}
 			Iterator<ObjectNode> i = getObjs(cv).iterator(); // these objects belong to cv.getmethod()
 			EscapeStatus temp = new EscapeStatus();
@@ -221,9 +225,9 @@ public class SummaryResolver {
 				while (itr.hasNext()) {
 					ObjectNode o = itr.next();
 					if (ptg.fields.containsKey(o) && ptg.fields.get(o).containsKey(f)) {
-						ptg.fields.get(o).get(f).forEach(obj -> {
+						for (ObjectNode obj : ptg.fields.get(o).get(f)) {
 							if (!c.contains(obj)) c.add(obj);
-						});
+						}
 						workListNext.addAll(ptg.fields.get(o).get(f));
 					}
 				}
@@ -251,14 +255,16 @@ public class SummaryResolver {
 		}
 		ObjectNode comparison = new ObjectNode(cv.object.ref, t);
 		ConditionalValue desired = new ConditionalValue(calleeMethod, comparison, (cv.fieldList == null) ? null : cv.fieldList.subList(0, depth), new Boolean(true));
-		existingSummaries.get(callerMethod).forEach((object, es) -> {
-			es.getStatus().forEach(e -> {
+		for (Map.Entry<ObjectNode, EscapeStatus> entry : existingSummaries.get(callerMethod).entrySet()) {
+			ObjectNode object = entry.getKey();
+			EscapeStatus es = entry.getValue();
+			for (EscapeState e : es.getStatus()) {
 				if (e instanceof ConditionalValue) {
 					if (desired.compareAtDepth((ConditionalValue) e, depth))
 						((LinkedHashSet<ObjectNode>) list).add(object);
 				}
-			});
-		});
+			}
+		}
 		return list;
 	}
 
