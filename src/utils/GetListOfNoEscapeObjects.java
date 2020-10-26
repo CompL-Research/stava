@@ -2,6 +2,7 @@ package utils;
 
 import es.EscapeStatus;
 import ptg.ObjectNode;
+import ptg.ObjectType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,6 +14,8 @@ public class GetListOfNoEscapeObjects {
 		ArrayList<Integer> arr = new ArrayList<>();
 		for (Map.Entry<ObjectNode, EscapeStatus> entry : summary.entrySet()) {
 			ObjectNode obj = entry.getKey();
+			if(obj.type != ObjectType.internal)
+				continue;
 			EscapeStatus es = entry.getValue();
 			if (es.containsNoEscape()) arr.add(obj.ref);
 		}
