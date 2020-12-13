@@ -104,6 +104,7 @@ public class SummaryResolver {
 		if (cv.getMethod() != null) {
 			SootMethod m = cv.getMethod();
 			if (m.isJavaLibraryMethod()) {
+//				System.out.println("Library method:"+m.getBytecodeSignature());
 				if (libMethodCheck(m)) return NoEscape.getInstance();
 				else return cv;
 //				return cv;

@@ -27,7 +27,10 @@ public class Stats {
 				if (ee.getKey().type == ObjectType.internal) {
 					internal++;
 					if (ee.getValue().containsNoEscape()) noEscape++;
-					else if (ee.getValue().containsCV()) cv++;
+					else if (ee.getValue().containsCV()) {
+						cv++;
+//						System.out.println(ee.getKey()+" of method:"+e.getKey().getBytecodeSignature()+" has a cv:"+ee.getValue());
+					}
 				}
 			}
 		}

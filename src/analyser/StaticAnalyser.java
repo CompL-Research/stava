@@ -30,8 +30,13 @@ public class StaticAnalyser extends BodyTransformer {
 
 	@Override
 	protected void internalTransform(Body body, String phasename, Map<String, String> options) {
+		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
+//		if(body.getMethod().getName().contains("<clinit>")){
+//			System.out.println("Skipping this method");
+//			return;
+//		}
 		boolean verboseFlag = false;
-//		if(body.getMethod().getBytecodeSignature().equals("<org.sunflow.SunflowAPI: parameter(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;[F)V>")) {
+//		if(body.getMethod().getBytecodeSignature().equals("<moldyn.md: <init>()V>")) {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
 //		}
@@ -41,7 +46,6 @@ public class StaticAnalyser extends BodyTransformer {
 		Path p = Paths.get(path.substring(0, path.indexOf(":")) + "/" + body.getMethod().getDeclaringClass().toString() + ".res");
 //		System.out.println(".res file path:"+p);
 		HashMap<ObjectNode, EscapeStatus> summary = new HashMap<>();
-//		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() );
 		if (verboseFlag) System.out.println(body);
 
 		PatchingChain<Unit> units = body.getUnits();
@@ -61,13 +65,14 @@ public class StaticAnalyser extends BodyTransformer {
 
 		int i = 0;
 		while (!workListNext.isEmpty()) {
-			if (verboseFlag) {
-				System.out.println("Loop " + i);
-				System.out.println("Worklist:");
-				workList.forEach(w -> System.out.println(w));
-				System.out.println("WorkListNext:");
-				workListNext.forEach(w -> System.out.println(w));
-			}
+			if(i==1000) System.out.println("Crossed "+i+" loops");
+//			if (verboseFlag) {
+//				System.out.println("Loop " + i);
+//				System.out.println("Worklist:");
+//				workList.forEach(w -> System.out.println(w));
+//				System.out.println("WorkListNext:");
+//				workListNext.forEach(w -> System.out.println(w));
+//			}
 			/*
 			 * Swap workList and workListNext
 			 */
@@ -89,7 +94,7 @@ public class StaticAnalyser extends BodyTransformer {
 			Iterator<Unit> iterator = workList.iterator();
 			while (iterator.hasNext()) {
 				Unit u = iterator.next();
-				if(verboseFlag) System.out.println("Unit: "+u);
+//				if(verboseFlag) System.out.println("Unit: "+u);
 				iterator.remove();
 				workListNext.remove(u);
 				FlowSet flowSet = flowSets.get(u);
@@ -115,7 +120,7 @@ public class StaticAnalyser extends BodyTransformer {
 				PointsToGraph outNew = new PointsToGraph(inNew);
 				try {
 					apply(u, outNew, summary);
-					if (verboseFlag) System.out.println("Applied changes to: " + u);
+//					if (verboseFlag) System.out.println("Applied changes to: " + u);
 				} catch (Exception e) {
 					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
 					System.out.println(s);
@@ -126,11 +131,11 @@ public class StaticAnalyser extends BodyTransformer {
 //					System.out.println(workList);
 					throw e;
 				}
-				if(verboseFlag) {
-					System.out.println("at: "+u.toString());
-					System.out.println("inNew:"+inNew.toString());
-					System.out.println("outNew:"+outNew.toString());
-				}
+//				if(verboseFlag) {
+//					System.out.println("at: "+u.toString());
+//					System.out.println("inNew:"+inNew.toString());
+//					System.out.println("outNew:"+outNew.toString());
+//				}
 //				if(bci == 135) {
 //					System.out.println("outNew:"+outNew);
 //				}

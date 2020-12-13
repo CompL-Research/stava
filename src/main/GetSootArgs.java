@@ -49,10 +49,12 @@ public class GetSootArgs {
 	private String[] normal(String[] args){
 		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
 		String[] sootArgs = {
-				// "-whole-program",
+//				"-whole-program",
 				"-app",
 				"-allow-phantom-refs",
 				"-keep-bytecode-offset",
+				"-p","cg.spark","on",
+				"-p","cg","all-reachable",
 				"-keep-offset",
 				"-soot-classpath", cp, "-prepend-classpath",
 				"-keep-line-number",
