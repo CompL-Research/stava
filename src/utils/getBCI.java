@@ -22,8 +22,19 @@ public class getBCI {
 			Do We need to include JNew in this?
 		*/
 		for(ValueBox ub: u.getUseBoxes() ) {
+			/*
+				This loop is to get the BCI specifically in the case of JNewArrayExpr and JNewMultiArrayExpr.
+				Each Unit in soot is constructed of multiple sub-Units. So, we reverse engineer the problematic
+				statements. We were getting problems only in AssignStmts and we need to get BCI of statement
+				on the right side of "=". This below line filters only the right side of a Assignment Statement.
+			*/
 			if(!ub.getClass().toString().equals("class soot.jimple.internal.JAssignStmt$LinkedRValueBox"))
-                continue;
+				continue;
+				
+			/*
+				 Next get the value contained in this box. If this value if a New Array/MultiArray Expr only
+				 then we need to move further.
+			 */
             Value v = ub.getValue();
             if(v==null)
                 continue;
@@ -31,6 +42,12 @@ public class getBCI {
                 ;
 			else continue;
 
+			/*
+				Actually BCI is linked to each box rather than the Unit. Because multiple statements in the
+				Java classfile can be combined together to form one JimpleStatment. Now, we get the BCI of this
+				required box and return it. If this BCI is null, we can fall back to the BCI associated with 
+				the Unit.
+			*/
 			BytecodeOffsetTag tg = (BytecodeOffsetTag) ub.getTag("BytecodeOffsetTag");
 			if(tg != null)
 				return tg.getBytecodeOffset();
