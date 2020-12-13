@@ -40,6 +40,14 @@ public class StaticAnalyser extends BodyTransformer {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
 //		}
+		// System.out.println("func: "+body.getMethod().toString());
+		
+		// if (true) // Ignore Library Methods.
+		// 	return;
+		// if (body.getMethod().toString().compareTo("<jdk.internal.org.objectweb.asm.Label: void visitSubroutine(jdk.internal.org.objectweb.asm.Label,long,int)>") == 0)
+		// {
+		// 	return;
+		// }
 		String path = Scene.v().getSootClassPath();
 //		System.out.println(path);
 //		System.out.println("Package:"+body.getMethod().getDeclaringClass().getJavaPackageName());
@@ -181,6 +189,7 @@ public class StaticAnalyser extends BodyTransformer {
 		PointsToGraph ptg = elem.getValue().getOut();
 		ptgs.put(body.getMethod(), ptg);
 		summaries.put(body.getMethod(), summary);
+		// System.out.println("func: "+body.getMethod().toString());
 	}
 
 	/*

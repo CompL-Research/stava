@@ -211,7 +211,8 @@ public class SummaryResolver {
 //			throw new IllegalArgumentException("the method of "+ cv.toString() + " doesn't have a ptg defined!");
 		}
 		if (cv.object.equals(new ObjectNode(0, ObjectType.returnValue))) {
-			c.addAll(ptg.vars.get(RetLocal.getInstance()));
+			if (ptg.vars.get(RetLocal.getInstance()) != null)
+				c.addAll(ptg.vars.get(RetLocal.getInstance()));
 		} else {
 			c.add(cv.object);
 		}
