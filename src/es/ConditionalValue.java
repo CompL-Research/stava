@@ -108,7 +108,6 @@ public class ConditionalValue extends EscapeState {
 			}
 		} catch (Exception e2) {
 			System.out.println("Comparing:" + this.toString() + " with " + e.toString() + " at depth " + depth);
-			// throw new IllegalArgumentException();
 			throw e2;
 		}
 		return true;

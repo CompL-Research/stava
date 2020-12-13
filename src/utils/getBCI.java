@@ -26,30 +26,30 @@ public class getBCI {
 				This loop is to get the BCI specifically in the case of JNewArrayExpr and JNewMultiArrayExpr.
 				Each Unit in soot is constructed of multiple sub-Units. So, we reverse engineer the problematic
 				statements. We were getting problems only in AssignStmts and we need to get BCI of statement
-				on the right side of "=". This below line filters only the right side of a Assignment Statement.
+				on the right side of "=". This below line filters only the right side of an Assignment Statement.
 			*/
-			if(!ub.getClass().toString().equals("class soot.jimple.internal.JAssignStmt$LinkedRValueBox"))
+			if ( !ub.getClass().toString().equals("class soot.jimple.internal.JAssignStmt$LinkedRValueBox") )
 				continue;
 				
 			/*
-				 Next get the value contained in this box. If this value if a New Array/MultiArray Expr only
-				 then we need to move further.
+				Next get the value contained in this box. If this value is a New Array/MultiArray Expr only
+				then we need to move further.
 			 */
             Value v = ub.getValue();
-            if(v==null)
+            if (v == null)
                 continue;
-            if(v instanceof JNewArrayExpr || v instanceof JNewMultiArrayExpr )
-                ;
-			else continue;
+            if ( ! (v instanceof JNewArrayExpr || v instanceof JNewMultiArrayExpr ) )
+                continue;
 
 			/*
-				Actually BCI is linked to each box rather than the Unit. Because multiple statements in the
-				Java classfile can be combined together to form one JimpleStatment. Now, we get the BCI of this
+				Because multiple statements in the Java classfile can be combined together to form 
+				one JimpleStatment, BCI is linked to each box rather than the Unit. BCI of a Unit is 
+				the BCI of last box processed in the Unit. Now, we get the BCI of this
 				required box and return it. If this BCI is null, we can fall back to the BCI associated with 
 				the Unit.
 			*/
 			BytecodeOffsetTag tg = (BytecodeOffsetTag) ub.getTag("BytecodeOffsetTag");
-			if(tg != null)
+			if (tg != null)
 				return tg.getBytecodeOffset();
 		}
 		
