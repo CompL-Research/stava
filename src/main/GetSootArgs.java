@@ -30,10 +30,11 @@ public class GetSootArgs {
 		// String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
 		String cp = dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
 		String[] sootArgs = {
-				"-whole-program",
-				// "-app",
+				// "-whole-program",
+				"-app",
 				"-allow-phantom-refs",
 				"-keep-bytecode-offset",
+				"-no-bodies-for-excluded",
 				"-keep-offset",
 				"-soot-classpath", cp, 
 				//"-prepend-classpath",
@@ -43,8 +44,9 @@ public class GetSootArgs {
 				"-p", "cg", refl_log,
 				"-output-dir", args[4],
 				"-output-format", "jimple",
-				"-include", "org.apache.",
-				"-include", "org.w3c."
+				"-x", "jdk.*",
+				"-include", "org.apache.*",
+				"-include", "org.w3c.*"
 		};
 		for(String s: sootArgs) {
 			System.out.print(s+" ");
