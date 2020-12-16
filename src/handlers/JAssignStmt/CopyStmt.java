@@ -13,7 +13,7 @@ import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JCastExpr;
 import utils.AnalysisError;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -22,7 +22,7 @@ import java.util.Set;
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class CopyStmt {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Value rhs = ((JAssignStmt)u).getRightOp();
 		if(rhs instanceof Local){
 			CopyStmt(u, ptg, summary);
@@ -31,7 +31,7 @@ public class CopyStmt {
 		} else AnalysisError.unidentifiedAssignStmtCase(u);
 	}
 
-	private static void rhsCastExpr(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void rhsCastExpr(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// TODO: put a check for cast to a runnable class.
 		// a = (Cast?)b
 		Local lhs = (Local)((JAssignStmt)u).getLeftOp();
@@ -53,13 +53,13 @@ public class CopyStmt {
 		CopyStmtHelper(u, (Local) ((JAssignStmt) u).getLeftOp(), rhs, ptg, summary);
 	}
 
-	private static void CopyStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void CopyStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		Local rhs = (Local) ((JAssignStmt) u).getRightOp();
 		CopyStmtHelper(u, lhs, rhs, ptg, summary);
 	}
 
-	private static void CopyStmtHelper(Unit u, Local lhs, Local rhs, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void CopyStmtHelper(Unit u, Local lhs, Local rhs, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Set<ObjectNode> ptSet = null;
 		if (ptg.vars.containsKey(rhs)) {
 			ptSet = (Set<ObjectNode>) ((HashSet<ObjectNode>) ptg.vars.get(rhs)).clone();

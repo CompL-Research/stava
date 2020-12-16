@@ -6,6 +6,8 @@ import ptg.ObjectNode;
 import ptg.PointsToGraph;
 import resolver.SummaryResolver;
 import soot.PackManager;
+import soot.Scene;
+import soot.options.Options;
 import soot.SootMethod;
 import soot.Transform;
 import utils.GetListOfNoEscapeObjects;
@@ -36,11 +38,16 @@ public class Main {
 		StaticAnalyser staticAnalyser = new StaticAnalyser();
 		PackManager.v().getPack("jtp").add(new Transform("jtp.sample", staticAnalyser));
 		long analysis_start = System.currentTimeMillis();
-		soot.Main.main(sootArgs);
+		Options.v().parse(sootArgs);
+		Scene.v().loadNecessaryClasses();
+		System.out.println("Application Classes: "+Scene.v().getApplicationClasses().size());
+		PackManager.v().runPacks();
+		// soot.Main.main(sootArgs);
 		long analysis_end = System.currentTimeMillis();
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
+		System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
 		SummaryResolver sr = new SummaryResolver();
 		long res_start = System.currentTimeMillis();
 		sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
@@ -51,11 +58,11 @@ public class Main {
 		printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 		saveStats(sr.existingSummaries, resolved, args[4]);
 
-		printResForJVM(sr.solvedSummaries, args[2], args[4]);
+		// printResForJVM(sr.solvedSummaries, args[2], args[4]);
 	}
 
-	private static void printAllInfo(HashMap<SootMethod, PointsToGraph> ptgs,
-									 HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String opDir) {
+	private static void printAllInfo(Map<SootMethod, PointsToGraph> ptgs,
+									 Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String opDir) {
 
 		Path p_opDir = Paths.get(opDir);
 		for (Map.Entry<SootMethod, PointsToGraph> entry : ptgs.entrySet()) {
@@ -92,7 +99,7 @@ public class Main {
 		}
 		return finalString.toString();
 	}
-	static void printResForJVM(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
+	static void printResForJVM(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
 		// Open File
 		Path p_ipDir = Paths.get(ipDir);
 		Path p_opDir = Paths.get(opDir);
@@ -119,8 +126,8 @@ public class Main {
 		}
 	}
 
-	static void saveStats(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> unresolved,
-						  HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>>resolved,
+	static void saveStats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> unresolved,
+						  Map<SootMethod, HashMap<ObjectNode, EscapeStatus>>resolved,
 						  String opDir) {
 		Stats beforeResolution = new Stats(unresolved);
 		System.out.println("calculating stats for solvedsummaries");
@@ -129,6 +136,7 @@ public class Main {
 		StringBuilder sb = new StringBuilder();
 		sb.append("Before resolution:\n"+beforeResolution);
 		sb.append("\nAfter resolution:\n"+afterResolution);
+		sb.append("\n");
 		try {
 			System.out.println("Trying to write to:" + p_opFile);
 			Files.write(p_opFile, sb.toString().getBytes(StandardCharsets.UTF_8),
