@@ -102,13 +102,13 @@ public class ConditionalValue extends EscapeState {
 			if (this.fieldList != null) {
 				if (e.fieldList == null) return false;
 				if (this.fieldList != null && this.fieldList.size() != depth) return false;
-				for (int i = 0; i < depth; i++) {
+				for (int i = 0; i < depth && i< e.fieldList.size() ; i++) {
 					if (!this.fieldList.get(i).equals(e.fieldList.get(i))) return false;
 				}
 			}
 		} catch (Exception e2) {
 			System.out.println("Comparing:" + this.toString() + " with " + e.toString() + " at depth " + depth);
-			throw new IllegalArgumentException();
+			throw e2;
 		}
 		return true;
 	}

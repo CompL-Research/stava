@@ -18,7 +18,7 @@ import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JInstanceFieldRef;
 import utils.AnalysisError;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -29,7 +29,7 @@ import java.util.Set;
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class StoreStmt {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JAssignStmt stmt = (JAssignStmt) u;
 		Value lhs = stmt.getLeftOp();
 		Value rhs = stmt.getRightOp();
@@ -54,7 +54,7 @@ public class StoreStmt {
 		} else AnalysisError.unidentifiedAssignStmtCase(u);
 	}
 
-	private static void lhsIsJInstanceFieldRef(Value rhs, Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void lhsIsJInstanceFieldRef(Value rhs, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		if (rhs instanceof StringConstant) {
 			storeStringConstantToInstanceFieldRefStmt(u, ptg, summary);
 		} else if (rhs instanceof NullConstant) {
@@ -78,7 +78,7 @@ public class StoreStmt {
 	 * 		es(rhs) U= es(object).field_name
 	 * }
 	 */
-	private static void storeStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void storeStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// Store case
 		JInstanceFieldRef lhs = (JInstanceFieldRef) ((JAssignStmt) u).getLeftOp();
 		Local rhs = (Local) ((JAssignStmt) u).getRightOp();
@@ -99,11 +99,11 @@ public class StoreStmt {
 		ptg.propagateES((Local) lhs.getBase(), rhs, summary);
 	}
 
-	private static void StaticStoreStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void StaticStoreStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		ptg.cascadeEscape((Local) ((JAssignStmt) u).getRightOp(), summary);
 	}
 
-	private static void storeClassConstantToArrayRef(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void storeClassConstantToArrayRef(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = ObjectFactory.getObj(u);
 		if (obj.type != ObjectType.internal) {
@@ -114,7 +114,7 @@ public class StoreStmt {
 		summary.put(obj, new EscapeStatus(Escape.getInstance()));
 	}
 
-	private static void storeStringConstantToInstanceFieldRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void storeStringConstantToInstanceFieldRefStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JInstanceFieldRef lhs = (JInstanceFieldRef) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = ObjectFactory.getObj(u);
 		if (obj.type != ObjectType.internal) {
@@ -136,7 +136,7 @@ public class StoreStmt {
 		summary.put(obj, es);
 	}
 
-	private static void storeStringConstantToArrayRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void storeStringConstantToArrayRefStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = ObjectFactory.getObj(u);
 		if (obj.type != ObjectType.internal) {
@@ -153,14 +153,14 @@ public class StoreStmt {
 		summary.put(obj, es);
 	}
 
-	private static void lhsArrayRef(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void lhsArrayRef(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JArrayRef lhs = (JArrayRef) ((JAssignStmt) u).getLeftOp();
 		Local rhs = (Local) ((JAssignStmt) u).getRightOp();
 		ptg.storeStmtArrayRef((Local) lhs.getBase(), rhs);
 		ptg.propagateES((Local) lhs.getBase(), rhs, summary);
 	}
 
-	private static void eraseFieldRefStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void eraseFieldRefStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		if(AssignStmtHandler.STORE==UpdateType.WEAK) return;
 		JInstanceFieldRef lhs = (JInstanceFieldRef) ((JAssignStmt) u).getLeftOp();
 		if (!ptg.vars.containsKey(lhs.getBase())) return;

@@ -11,7 +11,7 @@ import soot.Value;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.internal.JAssignStmt;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 
 /*
@@ -19,7 +19,7 @@ import java.util.HashSet;
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class EraseStmt {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Value lhs = ((JAssignStmt) u).getLeftOp();
 		if (lhs instanceof StaticFieldRef) {
 			// Ignore - [Verified]

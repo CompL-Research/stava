@@ -11,11 +11,12 @@ import soot.SootMethod;
 import java.util.*;
 
 public class SummaryResolver {
-	public HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries, solvedSummaries;
+	public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries;
+	public HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries;
 	HashMap<SootMethod, HashMap<ObjectNode, ResolutionStatus>> resolutionStatus;
-	HashMap<SootMethod, PointsToGraph> ptgs;
+	Map<SootMethod, PointsToGraph> ptgs;
 
-	private void init(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries) {
+	private void init(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries) {
 		this.existingSummaries = existingSummaries;
 		resolutionStatus = new HashMap<SootMethod, HashMap<ObjectNode, ResolutionStatus>>();
 		this.solvedSummaries = new HashMap<>();
@@ -33,8 +34,8 @@ public class SummaryResolver {
 
 	}
 
-	public void resolve(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries,
-						HashMap<SootMethod, PointsToGraph> ptgs) {
+	public void resolve(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries,
+						Map<SootMethod, PointsToGraph> ptgs) {
 		init(existingSummaries);
 		this.ptgs = ptgs;
 		//			System.out.println("--- <"+method.toString()+"> ---");
@@ -211,7 +212,8 @@ public class SummaryResolver {
 //			throw new IllegalArgumentException("the method of "+ cv.toString() + " doesn't have a ptg defined!");
 		}
 		if (cv.object.equals(new ObjectNode(0, ObjectType.returnValue))) {
-			c.addAll(ptg.vars.get(RetLocal.getInstance()));
+			if (ptg.vars.get(RetLocal.getInstance()) != null)
+				c.addAll(ptg.vars.get(RetLocal.getInstance()));
 		} else {
 			c.add(cv.object);
 		}

@@ -12,13 +12,13 @@ import utils.AnalysisError;
 import utils.getBCI;
 
 import java.security.InvalidParameterException;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
 public class JAssignStmtHandler {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		{
 			/*
 			 * JAssignStmt Example:
@@ -42,7 +42,7 @@ public class JAssignStmtHandler {
 		}
 	}
 
-	private static void lhsIsLocal(Value rhs, Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void lhsIsLocal(Value rhs, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		if (rhs instanceof AnyNewExpr) {
 			NewStmt.handle(u, ptg, summary);
 		} else if (rhs instanceof NullConstant) {
@@ -58,7 +58,7 @@ public class JAssignStmtHandler {
 		} else AnalysisError.unidentifiedAssignStmtCase(u);
 	}
 
-	private static void storeConstantToLocal(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void storeConstantToLocal(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// TODO: ObjectFactory no longer has responsibility to figure out ObjectType
 		ObjectNode obj = ObjectFactory.getObj(u);
 		if (obj.type != ObjectType.internal) {

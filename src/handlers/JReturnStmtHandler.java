@@ -10,10 +10,10 @@ import soot.Value;
 import soot.jimple.NullConstant;
 import soot.jimple.internal.JReturnStmt;
 
-import java.util.HashMap;
+import java.util.Map;
 
 public class JReturnStmtHandler {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Value op = ((JReturnStmt) u).getOp();
 		if (op instanceof NullConstant) return;
 			// TODO: is this correct?

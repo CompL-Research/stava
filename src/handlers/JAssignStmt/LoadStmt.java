@@ -17,7 +17,7 @@ import utils.AnalysisError;
 import utils.getBCI;
 
 import java.security.InvalidParameterException;
-import java.util.HashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -27,7 +27,7 @@ import java.util.Set;
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class LoadStmt {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JAssignStmt stmt = (JAssignStmt) u;
 		Value rhs = stmt.getRightOp();
 		if (rhs instanceof StaticFieldRef) {
@@ -39,7 +39,7 @@ public class LoadStmt {
 		} else AnalysisError.unidentifiedAssignStmtCase(u);
 	}
 
-	private static void staticField(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void staticField(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		ObjectNode obj = new ObjectNode(getBCI.get(u), ObjectType.external);
 		EscapeStatus es = new EscapeStatus(Escape.getInstance());
@@ -51,7 +51,7 @@ public class LoadStmt {
 		summary.put(obj, es);
 	}
 
-	private static void instanceField(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void instanceField(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JAssignStmt stmt = (JAssignStmt) u;
 		Local lhs = (Local) stmt.getLeftOp();
 		JInstanceFieldRef rhs = (JInstanceFieldRef) stmt.getRightOp();
@@ -110,7 +110,7 @@ public class LoadStmt {
 	 * ObjectType of the base, as in a case where the points-to set of the
 	 * base containing objects of both internal and external type.
 	 */
-	private static void rhsArrayRef(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void rhsArrayRef(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		JArrayRef arrayRef = (JArrayRef) rhs;

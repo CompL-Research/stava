@@ -15,16 +15,18 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.Map.Entry;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 public class StaticAnalyser extends BodyTransformer {
-	public static HashMap<SootMethod, PointsToGraph> ptgs;
-	public static HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
+	public static Map<SootMethod, PointsToGraph> ptgs;
+	public static Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
 	public static LinkedHashMap<Body, Analysis> analysis;
 
 	public StaticAnalyser() {
 		super();
 		analysis = new LinkedHashMap<>();
-		ptgs = new HashMap<>();
-		summaries = new HashMap<>();
+		ptgs = new ConcurrentHashMap<>();
+		summaries = new ConcurrentHashMap<>();
 	}
 
 
@@ -40,6 +42,14 @@ public class StaticAnalyser extends BodyTransformer {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
 //		}
+		// System.out.println("func: "+body.getMethod().toString() +" "+ body.getMethod().isJavaLibraryMethod());
+		
+		// if (true) // Ignore Library Methods.
+		// 	return;
+		// if (body.getMethod().toString().compareTo("<jdk.internal.org.objectweb.asm.Label: void visitSubroutine(jdk.internal.org.objectweb.asm.Label,long,int)>") == 0)
+		// {
+		// 	return;
+		// }
 		String path = Scene.v().getSootClassPath();
 //		System.out.println(path);
 //		System.out.println("Package:"+body.getMethod().getDeclaringClass().getJavaPackageName());
@@ -181,6 +191,7 @@ public class StaticAnalyser extends BodyTransformer {
 		PointsToGraph ptg = elem.getValue().getOut();
 		ptgs.put(body.getMethod(), ptg);
 		summaries.put(body.getMethod(), summary);
+		// System.out.println("func: "+body.getMethod().toString());
 	}
 
 	/*
@@ -189,7 +200,7 @@ public class StaticAnalyser extends BodyTransformer {
 	 * changes on.
 	 */
 
-	public void apply(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public void apply(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		if (u instanceof JAssignStmt) {
 			JAssignStmtHandler.handle(u, ptg, summary);
 		} else if (u instanceof JIdentityStmt) {

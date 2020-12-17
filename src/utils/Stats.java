@@ -16,7 +16,7 @@ public class Stats {
 	double percentageNE;
 	double percentageCV;
 
-	public Stats(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries) {
+	public Stats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries) {
 		internal = 0;
 		noEscape = 0;
 		cv = 0;

@@ -21,14 +21,14 @@ import utils.IsMultiThreadedClass;
 import utils.getBCI;
 
 import java.security.InvalidParameterException;
-import java.util.HashMap;
+import java.util.Map;
 
 /*
  * Meant to be only called by JAssignStmtHandler.
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class NewStmt {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		if (rhs instanceof JNewExpr) {
 			JNewStmt(u, ptg, summary);
@@ -40,7 +40,7 @@ public class NewStmt {
 	/*
 	 * Undoubtedly a new object creation. Object will be internal and ES will be does not escape.
 	 */
-	private static void JNewStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void JNewStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 
 		// check if rhs is runnable
 		Value rhs = ((JAssignStmt) u).getRightOp();
@@ -63,7 +63,7 @@ public class NewStmt {
 		if (!summary.containsKey(obj)) summary.put(obj, es);
 	}
 
-	private static void JNewArrayStmt(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	private static void JNewArrayStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// check if rhs is runnable
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		Value lhs = ((JAssignStmt) u).getLeftOp();

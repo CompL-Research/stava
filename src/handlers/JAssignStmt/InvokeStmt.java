@@ -17,14 +17,14 @@ import soot.jimple.internal.AbstractInvokeExpr;
 import soot.jimple.internal.JAssignStmt;
 import utils.getBCI;
 
-import java.util.HashMap;
+import java.util.Map;
 
 /*
  * Meant to be only called by JAssignStmtHandler.
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class InvokeStmt {
-	public static void handle(Unit u, PointsToGraph ptg, HashMap<ObjectNode, EscapeStatus> summary) {
+	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		AbstractInvokeExpr expr = (AbstractInvokeExpr) rhs;
