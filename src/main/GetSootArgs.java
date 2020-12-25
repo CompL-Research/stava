@@ -70,6 +70,7 @@ public class GetSootArgs {
 				"-process-dir", args[2],
 				"-output-dir", args[4],
 				"-output-format", "jimple",
+				"-x", "jdk.*"
 		};
 		for(String s: sootArgs) {
 			System.out.print(s+" ");

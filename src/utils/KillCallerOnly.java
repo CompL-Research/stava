@@ -12,8 +12,8 @@ public class KillCallerOnly {
 	/*
 	 * Meant to kill all the CallerOnly conditional values.
 	 */
-	public static HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> kill(HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries) {
-		HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> _ret = new HashMap<>();
+	public static Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> kill(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries) {
+		Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> _ret = new HashMap<>();
 		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : solvedSummaries.entrySet()) {
 			SootMethod method = entry.getKey();
 			HashMap<ObjectNode, EscapeStatus> map = entry.getValue();

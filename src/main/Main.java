@@ -5,6 +5,7 @@ import es.EscapeStatus;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
 import resolver.SummaryResolver;
+import resolver.ReworkedResolver;
 import soot.PackManager;
 import soot.Scene;
 import soot.options.Options;
@@ -47,16 +48,19 @@ public class Main {
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
-		System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
-		SummaryResolver sr = new SummaryResolver();
-		long res_start = System.currentTimeMillis();
-		sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
-		long res_end = System.currentTimeMillis();
-		System.out.println("Resolution is done");
-		System.out.println("Time Taken:"+(res_end-res_start)/1000F);
-		HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = kill(sr.solvedSummaries);
-		printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
-		saveStats(sr.existingSummaries, resolved, args[4]);
+		ReworkedResolver resolver = new ReworkedResolver(staticAnalyser.summaries,
+											staticAnalyser.ptgs);
+		// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
+		// SummaryResolver sr = new SummaryResolver();
+		// long res_start = System.currentTimeMillis();
+		// sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
+		// long res_end = System.currentTimeMillis();
+		// System.out.println("Resolution is done");
+		// System.out.println("Time Taken:"+(res_end-res_start)/1000F);
+		// HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
+		printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+		// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+		// saveStats(sr.existingSummaries, resolved, args[4]);
 
 		// printResForJVM(sr.solvedSummaries, args[2], args[4]);
 	}
