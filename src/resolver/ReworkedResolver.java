@@ -85,7 +85,7 @@ public class ReworkedResolver{
          */
         AddCallerSummaries();
         GenerateGraphFromSummary();
-        FindSSC();
+        FindSCC();
         // findCondesedGraph();
     }
 
@@ -140,6 +140,9 @@ public class ReworkedResolver{
                     }
                     else {
                         newStates.add(state);
+                        if(state instanceof Escape) {
+                            this.solvedSummaries.get(key).put(obj, new EscapeStatus(Escape.getInstance()));
+                        }
                     }
                 }
 
@@ -202,13 +205,28 @@ public class ReworkedResolver{
                 for (EscapeState state : status.status ) {
                     if ( state instanceof ConditionalValue) {
                         ConditionalValue cstate = (ConditionalValue)state;
-                        if ( cstate.method != null) {
+                        if ( cstate.object.equals(new ObjectNode(0, ObjectType.returnValue)) 
+                            && cstate.method == null) {
+                                cstate.method = key;
+                        }
+
+                        if ( cstate.method != null || true) {
                             try {
-                                StandardObject objx = getSObj(cstate.method,cstate.object);
-                                target.add(objx);
-                                
+                                // StandardObject objx = getSObj(cstate.method,cstate.object);
+                                // target.add(objx);
+                                // Actually figure out, if above code is sufficient or not.
+                                // If not, use the below one.
+                                // getObjs() actually find all the objects pointed by obj along with
+                                // its fields of obj pointed by conditional value.
+                                Set<StandardObject> objx = getObjs(cstate);
+                                target.addAll(objx);
+                                for (StandardObject x: objx) {
+                                    if (this.graph.get(x) == null) {
+                                        this.graph.put(x, new HashSet<>());
+                                    }
+                                }
                             } catch(Exception e) {
-                                System.out.println(cstate.method+" "+cstate.object);
+                                System.err.println(cstate.method+" "+cstate.object);
                                 System.err.println(e);
                                 continue;
                             }
@@ -230,7 +248,61 @@ public class ReworkedResolver{
         printGraph(this.revgraph);
     }
 
-    void FindSSC() {
+    private Set<StandardObject> getObjs(ConditionalValue cv) {
+		Iterable<ObjectNode> _ret = new LinkedHashSet<ObjectNode>();
+		Collection<ObjectNode> c = (Collection<ObjectNode>) _ret;
+		// <m, <parameter,0>.f.g> or <m,<returnValue,0>.f.g>
+		LinkedList<ObjectNode> workList = new LinkedList<ObjectNode>();
+		PointsToGraph ptg;
+		ptg = this.ptgs.get(cv.getMethod());
+		if (ptg == null || cv.object.equals(new ObjectNode(0, ObjectType.returnValue))) {
+//			System.out.println("the method of "+ cv.toString() + " doesn't have a ptg defined!");
+            HashSet<StandardObject> x = new HashSet<>();
+            x.add(getSObj(cv.getMethod(), cv.object));
+            return x;
+//			throw new IllegalArgumentException("the method of "+ cv.toString() + " doesn't have a ptg defined!");
+		}
+		// if (cv.object.equals(new ObjectNode(0, ObjectType.returnValue))) {
+		// 	if (ptg.vars.get(RetLocal.getInstance()) != null)
+		// 		c.addAll(ptg.vars.get(RetLocal.getInstance()));
+		// } else {
+		// 	c.add(cv.object);
+        // }
+        c.add (cv.object);
+
+        workList.addAll(c);
+
+		LinkedList<ObjectNode> temp;
+		LinkedList<ObjectNode> workListNext = new LinkedList<ObjectNode>();
+		if (cv.fieldList != null) {
+			Iterator<SootField> i = cv.fieldList.iterator();
+			while (i.hasNext()) {
+				SootField f = i.next();
+				Iterator<ObjectNode> itr = workList.iterator();
+				while (itr.hasNext()) {
+					ObjectNode o = itr.next();
+					if (ptg.fields.containsKey(o) && ptg.fields.get(o).containsKey(f)) {
+						for (ObjectNode obj : ptg.fields.get(o).get(f)) {
+							if (!c.contains(obj)) c.add(obj);
+						}
+						workListNext.addAll(ptg.fields.get(o).get(f));
+					}
+				}
+				workList.clear();
+				temp = workListNext;
+				workListNext = workList;
+				workList = temp;
+			}
+		}
+        // return _ret;
+        Set<StandardObject> fnobjs = new HashSet<>();
+        for (ObjectNode x: c) {
+            fnobjs.add(getSObj(cv.getMethod(), x));
+        }
+        return fnobjs;
+	}
+
+    void FindSCC() {
         HashMap<StandardObject, Boolean> used = new HashMap<>();
         List<List<StandardObject> > components = new ArrayList<>();
 
@@ -251,13 +323,14 @@ public class ReworkedResolver{
             dfs2(u, used, component);
             components.add(component);
             System.out.println("Compo:" + component);
+            resolve(component);
         }
     }
 
     void dfs1 (StandardObject u, HashMap<StandardObject, Boolean> used) {
         used.put(u, true);
-        if (this.graph.get(u) != null) {    
-            for (StandardObject v: this.graph.get(u)) {
+        if (this.revgraph.get(u) != null) {    
+            for (StandardObject v: this.revgraph.get(u)) {
                 if (used.containsKey(v) && used.get(v) == true)
                     continue;
                 dfs1(v,used);
@@ -271,8 +344,8 @@ public class ReworkedResolver{
         used.put(u, true);
         component.add(u);
         
-        if (this.revgraph.get(u) != null) {
-            for (StandardObject v: this.revgraph.get(u)) {
+        if (this.graph.get(u) != null) {
+            for (StandardObject v: this.graph.get(u)) {
                 if (used.containsKey(v) && used.get(v) == true)
                     continue;
                 dfs2(v,used,component);
@@ -280,7 +353,45 @@ public class ReworkedResolver{
         }
     }
 
+    boolean isReturnObject(StandardObject s) {
+        if (s.getObject().equals(new ObjectNode(0, ObjectType.returnValue)))
+            return true;
+        return false;
+    }
+    /*
+     *  Two issues: First return statements have a function name as
+     *  null. and this code simply ignores such statements.
+     * 
+     *  Second, return statements should be marked as escaping iff object
+     *  returned is allocated in that function.
+     */
     void resolve(List<StandardObject> component) {
-        
+        List<EscapeState> conds = new ArrayList<>();
+        for (StandardObject sobj : component) {
+            if (isReturnObject(sobj)) 
+            {
+                SetComponent(component, Escape.getInstance());
+                return;
+            }
+            for (StandardObject nxt: this.graph.get(sobj)) {
+                if (nxt.getMethod().isJavaLibraryMethod())
+                    continue;
+                
+                EscapeStatus es = this.existingSummaries.get(nxt.getMethod()).get(nxt.getObject());
+                if (es != null && es.doesEscape()) {
+                    SetComponent(component, Escape.getInstance());
+                    return;
+                }
+            }
+        }
+        SetComponent(component, NoEscape.getInstance());
+    }
+
+    void SetComponent ( List<StandardObject> comp, EscapeState es) {
+        System.out.println(es);
+        for (StandardObject s: comp) {
+            if (this.existingSummaries.get(s.getMethod()) != null)
+                this.existingSummaries.get(s.getMethod()).put(s.getObject(), new EscapeStatus(es));
+        }
     }
 }

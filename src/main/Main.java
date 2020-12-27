@@ -48,6 +48,7 @@ public class Main {
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
+		printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 		ReworkedResolver resolver = new ReworkedResolver(staticAnalyser.summaries,
 											staticAnalyser.ptgs);
 		// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
