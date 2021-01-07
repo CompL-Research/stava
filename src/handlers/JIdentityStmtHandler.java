@@ -9,6 +9,7 @@ import soot.Local;
 import soot.PrimType;
 import soot.Unit;
 import soot.Value;
+import soot.SootMethod;
 import soot.jimple.ParameterRef;
 import soot.jimple.ThisRef;
 import soot.jimple.internal.JCaughtExceptionRef;
@@ -17,7 +18,7 @@ import soot.jimple.internal.JIdentityStmt;
 import java.util.Map;
 
 public class JIdentityStmtHandler {
-	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public static void handle(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JIdentityStmt stmt = (JIdentityStmt) u;
 		Value lhs = stmt.getLeftOp();
 		if (lhs.getType() instanceof PrimType) return;

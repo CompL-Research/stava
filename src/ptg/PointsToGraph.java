@@ -4,7 +4,7 @@ import es.ConditionalValue;
 import es.EscapeStatus;
 import soot.Local;
 import soot.SootField;
-
+import soot.SootMethod;
 import java.util.*;
 
 public class PointsToGraph {
@@ -324,16 +324,17 @@ public class PointsToGraph {
 		}
 	}
 
-	public void setAsReturn(Local l, Map<ObjectNode, EscapeStatus> summary) {
+	public void setAsReturn(SootMethod m, Local l, Map<ObjectNode, EscapeStatus> summary) {
 		if (!vars.containsKey(l)) return;
 		Set<ObjectNode> s = new HashSet<>();
 		s.addAll(vars.get(l));
 		// TODO: Incorrect. Rectify this.
 		vars.put(RetLocal.getInstance(), s);
 		ObjectNode o = new ObjectNode(0, ObjectType.returnValue);
-		ConditionalValue ret = new ConditionalValue(null, o);
+		ConditionalValue ret = new ConditionalValue(m, o);
 		cascadeCV(l, ret, summary);
 	}
+
 
 	public void cascadeEscape(Local l, Map<ObjectNode, EscapeStatus> summary) {
 		if (!vars.containsKey(l)) return;

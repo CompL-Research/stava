@@ -129,7 +129,7 @@ public class StaticAnalyser extends BodyTransformer {
 				 */
 				PointsToGraph outNew = new PointsToGraph(inNew);
 				try {
-					apply(u, outNew, summary);
+					apply(body.getMethod(), u, outNew, summary);
 //					if (verboseFlag) System.out.println("Applied changes to: " + u);
 				} catch (Exception e) {
 					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
@@ -200,17 +200,17 @@ public class StaticAnalyser extends BodyTransformer {
 	 * changes on.
 	 */
 
-	public void apply(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public void apply(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		if (u instanceof JAssignStmt) {
 			JAssignStmtHandler.handle(u, ptg, summary);
 		} else if (u instanceof JIdentityStmt) {
-			JIdentityStmtHandler.handle(u, ptg, summary);
+			JIdentityStmtHandler.handle(m, u, ptg, summary);
 		} else if (u instanceof JInvokeStmt) {
 			JInvokeStmtHandler.handle(u, ptg, summary);
 		} else if (u instanceof JReturnVoidStmt) {
 			// Nothing to do here!
 		} else if (u instanceof JReturnStmt) {
-			JReturnStmtHandler.handle(u, ptg, summary);
+			JReturnStmtHandler.handle(m, u, ptg, summary);
 		} else if (u instanceof JThrowStmt) {
 			JThrowStmtHandler.handle(u, ptg, summary);
 		} else if (u instanceof MonitorStmt) {

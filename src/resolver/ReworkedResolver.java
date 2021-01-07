@@ -11,12 +11,20 @@ import soot.SootMethod;
 import soot.Scene;
 import soot.Unit;
 import soot.Value;
+import soot.*;
 import soot.jimple.InvokeExpr;
 import soot.jimple.internal.*;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
 
 import java.util.*;
+/*
+ *
+ * Some notes:
+ * 1. We just need to mark object in the function returned as escaping and nothing more, if some object is coming from
+ *      callee then it should be marked as escaping in the callee. It is not the responsiblity of caller.
+ * 
+ */
 
 class StandardObject {
     private SootMethod method;
@@ -108,6 +116,7 @@ public class ReworkedResolver{
         CallGraph cg = Scene.v().getCallGraph();
         for (SootMethod key: this.existingSummaries.keySet() ) {
             HashMap<ObjectNode, EscapeStatus> methodInfo = this.existingSummaries.get(key);
+            HashMap<ObjectNode, EscapeStatus> solvedMethodInfo = this.solvedSummaries.get(key);
 
             for (ObjectNode obj: methodInfo.keySet()) {
 
@@ -118,7 +127,8 @@ public class ReworkedResolver{
                     if ( state instanceof ConditionalValue) {
 
                         ConditionalValue cstate = (ConditionalValue)state;
-                        if (cstate.method != null || cstate.object.type!=ObjectType.argument) {
+                        if (//cstate.method != null || 
+                            cstate.object.type!=ObjectType.argument) {
                             newStates.add(state);
                             continue;
                         }
@@ -128,15 +138,22 @@ public class ReworkedResolver{
                             continue;
                         }
                         Iterator<Edge> iter = cg.edgesInto(key);
-
+                        newStates.add(state);
                         while(iter.hasNext()) {
                             Edge edge = iter.next();
                             System.out.println(key+" "+obj+" "+cstate+" " + +parameternumber + " "+edge.src() );
+                            
                             List<ObjectNode> objects = GetObjects(edge.srcUnit(), parameternumber, edge.src());
-                            for (ObjectNode x: objects) {
-                                newStates.add(CreateNewEscapeState(x, cstate, edge.src()));
+                            if (objects == null) {
+                                // Do we need to do something, if we cannot find any objects here?
+                                System.err.println("Objects are null!.");
                             }
+                            else
+                                for (ObjectNode x: objects) {
+                                    newStates.add(CreateNewEscapeState(x, cstate, edge.src()));
+                                }
                         }
+
                     }
                     else {
                         newStates.add(state);
@@ -147,7 +164,9 @@ public class ReworkedResolver{
                 }
 
                 System.out.println(key+" "+obj+"From: "+ status.status);
-                status.status = newStates;
+                // status.status = newStates;
+                solvedMethodInfo.put(obj, new EscapeStatus());
+                solvedMethodInfo.get(obj).status = newStates;
                 System.out.println(key+" "+obj+"TO: "+ newStates);
 
             }
@@ -172,16 +191,21 @@ public class ReworkedResolver{
             return null;
         }
         Value arg = expr.getArg(num);
+        if (! (arg instanceof Local))
+            return objs;
+        else if ( ((Local)arg).getType() instanceof PrimType )
+            return objs;
         try {
             for (ObjectNode o: this.ptgs.get(src).vars.get(arg)) {
                 objs.add(o);
             }
         }
         catch (Exception e) {
-            System.out.println(src+" "+arg);
-            throw e;
+            System.err.println(src+" "+arg+" "+u+" "+num);
+            System.err.println(e);
+            return null;
         }
-        System.out.println("Unit: "+u+" : "+objs);
+        // System.out.println("Unit: "+u+" : "+objs);
         return objs;
     }
 
@@ -196,8 +220,8 @@ public class ReworkedResolver{
         return objMap.get(method).get(obj);
     }
     void GenerateGraphFromSummary() {
-        for (SootMethod key: this.existingSummaries.keySet() ) {
-            HashMap<ObjectNode, EscapeStatus> methodInfo = this.existingSummaries.get(key);
+        for (SootMethod key: this.solvedSummaries.keySet() ) {
+            HashMap<ObjectNode, EscapeStatus> methodInfo = this.solvedSummaries.get(key);
 
             for (ObjectNode obj: methodInfo.keySet()) {
                 EscapeStatus status = methodInfo.get(obj);
@@ -205,12 +229,12 @@ public class ReworkedResolver{
                 for (EscapeState state : status.status ) {
                     if ( state instanceof ConditionalValue) {
                         ConditionalValue cstate = (ConditionalValue)state;
-                        if ( cstate.object.equals(new ObjectNode(0, ObjectType.returnValue)) 
-                            && cstate.method == null) {
-                                cstate.method = key;
-                        }
+                        // if ( cstate.object.equals(new ObjectNode(0, ObjectType.returnValue)) 
+                        //     && cstate.method == null) {
+                        //         cstate.method = key;
+                        // }
 
-                        if ( cstate.method != null || true) {
+                        if ( cstate.method != null ) {
                             try {
                                 // StandardObject objx = getSObj(cstate.method,cstate.object);
                                 // target.add(objx);
@@ -231,6 +255,9 @@ public class ReworkedResolver{
                                 continue;
                             }
                         }
+                        else {
+                            System.err.println(key+" "+obj+" Method NULL: "+cstate);
+                        }
                     }
                 }
                 this.graph.put(objMap.get(key).get(obj), target);
@@ -244,8 +271,8 @@ public class ReworkedResolver{
                 this.revgraph.get(val).add(key);
             }
         }
-        printGraph(this.graph);
-        printGraph(this.revgraph);
+        // printGraph(this.graph);
+        // printGraph(this.revgraph);
     }
 
     private Set<StandardObject> getObjs(ConditionalValue cv) {
@@ -275,7 +302,7 @@ public class ReworkedResolver{
 		LinkedList<ObjectNode> temp;
 		LinkedList<ObjectNode> workListNext = new LinkedList<ObjectNode>();
 		if (cv.fieldList != null) {
-			Iterator<SootField> i = cv.fieldList.iterator();
+            Iterator<SootField> i = cv.fieldList.iterator();
 			while (i.hasNext()) {
 				SootField f = i.next();
 				Iterator<ObjectNode> itr = workList.iterator();
@@ -314,7 +341,7 @@ public class ReworkedResolver{
 
         used = new HashMap<>();
 
-        System.out.println("Topo Order: "+this.reverseTopoOrder);
+        // System.out.println("Topo Order: "+this.reverseTopoOrder);
         for (int i= 0 ;i<this.reverseTopoOrder.size();i++) {
             StandardObject u = this.reverseTopoOrder.get(this.reverseTopoOrder.size() -1 -i);
             if (used.containsKey(u) && used.get(u) == true)
@@ -360,11 +387,48 @@ public class ReworkedResolver{
     }
     /*
      *  Two issues: First return statements have a function name as
-     *  null. and this code simply ignores such statements.
+     *  null. and this code simply ignores such statements. - Resolved
+     * 
+     *  How to check code with mutiple return statements.
      * 
      *  Second, return statements should be marked as escaping iff object
      *  returned is allocated in that function.
      */
+    boolean isEscapingObject( StandardObject sobj) {
+        HashMap<ObjectNode, EscapeStatus> ess = this.solvedSummaries.get(sobj.getMethod());
+        
+        if (ess == null)
+            return false;
+
+        EscapeStatus es = ess.get(sobj.getObject());
+        if (es != null && es.doesEscape()) {
+            // SetComponent(component, Escape.getInstance());
+            return true;
+        }
+        return isAssignedToThis(sobj);
+    }
+
+    boolean isAssignedToThis(StandardObject sobj) {
+        HashMap<ObjectNode, EscapeStatus> objEs = this.solvedSummaries.get(sobj.getMethod());
+        if (objEs == null)
+            return false;
+        EscapeStatus es = objEs.get(sobj.getObject());
+
+        if (es == null)
+            return false;
+
+        if (sobj.getObject().type == ObjectType.parameter || sobj.getObject().type == ObjectType.argument)
+            return false;
+
+        for (EscapeState e : es.status) {
+            if (e instanceof ConditionalValue) {
+                ConditionalValue cv = (ConditionalValue) e;
+                if (cv.method == null && cv.object.type == ObjectType.argument && cv.object.ref == -1)
+                    return true;
+            }
+        }
+        return false;
+    }
     void resolve(List<StandardObject> component) {
         List<EscapeState> conds = new ArrayList<>();
         for (StandardObject sobj : component) {
@@ -373,15 +437,35 @@ public class ReworkedResolver{
                 SetComponent(component, Escape.getInstance());
                 return;
             }
+            if (isEscapingObject(sobj)) {
+                SetComponent(component, Escape.getInstance());
+                return;
+            }
+            // if (isAssignedToThis(sobj)) {
+            //     SetComponent(component, Escape.getInstance());
+            // }
+
+            try {
+                System.err.println(sobj.getMethod()+" "+sobj.getObject());
+                System.err.println(" "+this.solvedSummaries.get(sobj.getMethod()).get(sobj.getObject()));
+            }
+            catch (Exception e) {
+                // continue;
+            }
             for (StandardObject nxt: this.graph.get(sobj)) {
                 if (nxt.getMethod().isJavaLibraryMethod())
                     continue;
-                
-                EscapeStatus es = this.existingSummaries.get(nxt.getMethod()).get(nxt.getObject());
-                if (es != null && es.doesEscape()) {
-                    SetComponent(component, Escape.getInstance());
-                    return;
+                try{
+                    if (isEscapingObject(nxt)) {
+                        SetComponent(component, Escape.getInstance());
+                        return;
+                    }
                 }
+                catch(Exception e) {
+                    System.out.println(this.solvedSummaries.get(nxt.getMethod())+" "+nxt.getMethod()+" "+nxt.getObject());
+                    // throw e;
+                }
+                
             }
         }
         SetComponent(component, NoEscape.getInstance());
@@ -390,8 +474,8 @@ public class ReworkedResolver{
     void SetComponent ( List<StandardObject> comp, EscapeState es) {
         System.out.println(es);
         for (StandardObject s: comp) {
-            if (this.existingSummaries.get(s.getMethod()) != null)
-                this.existingSummaries.get(s.getMethod()).put(s.getObject(), new EscapeStatus(es));
+            if (this.solvedSummaries.get(s.getMethod()) != null)
+                this.solvedSummaries.get(s.getMethod()).put(s.getObject(), new EscapeStatus(es));
         }
     }
 }

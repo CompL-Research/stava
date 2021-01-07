@@ -27,7 +27,12 @@ public class JInvokeStmtHandler {
 	public static void handleExpr(InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 //		if(expr.getMethod().isJavaLibraryMethod()) {
 //			return;
-//		} 
+//		}
+		/*
+		 * Please note that expr.getMethod() is wrong. use cg.edgesOutOf() to get methods(). expr.getMethod() can also 
+		 * point to functions which doesn't exist. This means that handleExpr should have a loop to 
+		 */
+
 		/*
 		 * special: only constructors and initializers
 		 * static: static method calls
