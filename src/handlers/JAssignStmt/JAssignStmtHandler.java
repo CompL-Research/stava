@@ -29,7 +29,7 @@ public class JAssignStmtHandler {
 			Value rhs = stmt.getRightOp();
 			if (lhs.getType() instanceof PrimType) {
 				if (rhs instanceof InvokeExpr) {
-					JInvokeStmtHandler.handleExpr((InvokeExpr) rhs, ptg, summary);
+					JInvokeStmtHandler.handleExpr(u,(InvokeExpr) rhs, ptg, summary);
 				}
 				return;
 			} else if (lhs instanceof Local) {

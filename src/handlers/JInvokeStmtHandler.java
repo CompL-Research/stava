@@ -9,7 +9,11 @@ import soot.*;
 import soot.jimple.Constant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.internal.*;
+import soot.jimple.toolkits.callgraph.CallGraph;
+import soot.jimple.toolkits.callgraph.Edge;
+import soot.jimple.toolkits.callgraph.Targets;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -21,10 +25,10 @@ public class JInvokeStmtHandler {
 		 */
 		JInvokeStmt stmt = (JInvokeStmt) u;
 		InvokeExpr expr = stmt.getInvokeExpr();
-		handleExpr(expr, ptg, summary);
+		handleExpr(u, expr, ptg, summary);
 	}
 
-	public static void handleExpr(InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public static void handleExpr(Unit u, InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 //		if(expr.getMethod().isJavaLibraryMethod()) {
 //			return;
 //		}
@@ -82,16 +86,23 @@ public class JInvokeStmtHandler {
 			System.out.println("Unidentified invoke expr: " + expr.toString());
 			throw new IllegalArgumentException(expr.toString());
 		}
-		SootMethod method = expr.getMethod();
-		List<Value> args = expr.getArgs();
-		for (int i = 0; i < args.size(); i++) {
-			Value arg = args.get(i);
-			if (!(arg.getType() instanceof RefType)) continue;
-			if (arg instanceof Constant) continue;
-			ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
-			ConditionalValue cv = new ConditionalValue(method, obj, true);
-			ptg.cascadeCV((Local) args.get(i), cv, summary);
-		}
 
+		CallGraph cg = Scene.v().getCallGraph();
+
+		Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
+
+		while(methods.hasNext())
+		{
+			SootMethod method = methods.next().method();
+			List<Value> args = expr.getArgs();
+			for (int i = 0; i < args.size(); i++) {
+				Value arg = args.get(i);
+				if (!(arg.getType() instanceof RefType)) continue;
+				if (arg instanceof Constant) continue;
+				ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
+				ConditionalValue cv = new ConditionalValue(method, obj, true);
+				ptg.cascadeCV((Local) args.get(i), cv, summary);
+			}
+		}
 	}
 }

@@ -408,7 +408,7 @@ public class ReworkedResolver{
         return isAssignedToThis(sobj);
     }
 
-    boolean isAssignedToThis(StandardObject sobj) {
+    boolean isAssignedToThis(StandardObject sobj) { // Is assigned to this or parameter.
         HashMap<ObjectNode, EscapeStatus> objEs = this.solvedSummaries.get(sobj.getMethod());
         if (objEs == null)
             return false;
