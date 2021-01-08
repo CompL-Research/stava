@@ -423,7 +423,7 @@ public class ReworkedResolver{
         for (EscapeState e : es.status) {
             if (e instanceof ConditionalValue) {
                 ConditionalValue cv = (ConditionalValue) e;
-                if (cv.method == null && cv.object.type == ObjectType.argument && cv.object.ref == -1)
+                if (cv.method == null && cv.object.type == ObjectType.argument )//&& cv.object.ref == -1)
                     return true;
             }
         }
@@ -432,12 +432,22 @@ public class ReworkedResolver{
     void resolve(List<StandardObject> component) {
         List<EscapeState> conds = new ArrayList<>();
         for (StandardObject sobj : component) {
+            try {
+                System.err.println(sobj.getMethod()+" "+sobj.getObject());
+                System.err.println(this.graph.get(sobj));
+                System.err.println(" "+this.solvedSummaries.get(sobj.getMethod()).get(sobj.getObject()));
+            }
+            catch (Exception e) {
+                System.err.println("Error");
+            }
             if (isReturnObject(sobj)) 
             {
+                System.err.println("Identified as return obj");
                 SetComponent(component, Escape.getInstance());
                 return;
             }
             if (isEscapingObject(sobj)) {
+                System.err.println("Identified as escaping obj");
                 SetComponent(component, Escape.getInstance());
                 return;
             }
@@ -445,18 +455,12 @@ public class ReworkedResolver{
             //     SetComponent(component, Escape.getInstance());
             // }
 
-            try {
-                System.err.println(sobj.getMethod()+" "+sobj.getObject());
-                System.err.println(" "+this.solvedSummaries.get(sobj.getMethod()).get(sobj.getObject()));
-            }
-            catch (Exception e) {
-                // continue;
-            }
             for (StandardObject nxt: this.graph.get(sobj)) {
                 if (nxt.getMethod().isJavaLibraryMethod())
                     continue;
                 try{
                     if (isEscapingObject(nxt)) {
+                        System.err.println("Escaping obj: "+nxt);
                         SetComponent(component, Escape.getInstance());
                         return;
                     }
@@ -472,7 +476,7 @@ public class ReworkedResolver{
     }
 
     void SetComponent ( List<StandardObject> comp, EscapeState es) {
-        System.out.println(es);
+        System.err.println(es);
         for (StandardObject s: comp) {
             if (this.solvedSummaries.get(s.getMethod()) != null)
                 this.solvedSummaries.get(s.getMethod()).put(s.getObject(), new EscapeStatus(es));
