@@ -10,7 +10,9 @@ public class GetSootArgs {
 		 * args[3] -> main class
 		 * args[4] -> output directory
 		 */
-
+		if(args[3].equals("JDK")) {
+			return jdk(args);
+		}
 		if (args[1].contains("true") || args[1].contains("True")) {
 			// this is a benchmark
 			if (args[3].contains("Harness")) {
@@ -46,7 +48,8 @@ public class GetSootArgs {
 				"-output-format", "jimple",
 				"-x", "jdk.*",
 				"-include", "org.apache.*",
-				"-include", "org.w3c.*"
+				"-include", "org.w3c.*",
+				
 		};
 		for(String s: sootArgs) {
 			System.out.print(s+" ");
@@ -58,7 +61,7 @@ public class GetSootArgs {
 		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
 		String[] sootArgs = {
 				"-whole-program",
-				// "-app",
+				"-app",
 				"-allow-phantom-refs",
 				"-keep-bytecode-offset",
 				"-p","cg.spark","on",
@@ -70,6 +73,36 @@ public class GetSootArgs {
 				"-process-dir", args[2],
 				"-output-dir", args[4],
 				"-output-format", "jimple",
+				"-x", "jdk.*",
+				// "-include", "java.util.HashMap"
+		};
+		for(String s: sootArgs) {
+			System.out.print(s+" ");
+		}
+		System.out.println("");
+		return sootArgs;
+	}
+
+	private String[] jdk(String[] args) {
+		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
+		String[] sootArgs = {
+				"-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-p","cg.spark","on",
+				"-p","cg","all-reachable",
+				"-keep-offset",
+				"-soot-classpath", cp, "-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				// "-process-dir", args[2],
+				// "-process-path", args[0]+"/jre/lib/rt.jar",
+				// "-process-path", args[0]+"/jre/lib/jce.jar",
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+				"-i", "*",
+				"-i", "java.*",
 				"-x", "jdk.*"
 		};
 		for(String s: sootArgs) {
