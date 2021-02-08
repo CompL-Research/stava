@@ -29,17 +29,17 @@ public class GetSootArgs {
 	private String[] dacapo(String[] args){
 		String dir = args[2] + "/out";
 		String refl_log = "reflection-log:" + dir + "/refl.log";
-		// String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
-		String cp = dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		// String cp = dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
 		String[] sootArgs = {
-				// "-whole-program",
+				"-whole-program",
 				"-app",
 				"-allow-phantom-refs",
 				"-keep-bytecode-offset",
 				"-no-bodies-for-excluded",
 				"-keep-offset",
 				"-soot-classpath", cp, 
-				//"-prepend-classpath",
+				"-prepend-classpath",
 				"-keep-line-number",
 				"-main-class", args[3],
 				"-process-dir", dir,
@@ -47,6 +47,7 @@ public class GetSootArgs {
 				"-output-dir", args[4],
 				"-output-format", "jimple",
 				"-x", "jdk.*",
+				"-i", "java.*",
 				"-include", "org.apache.*",
 				"-include", "org.w3c.*",
 				
@@ -95,7 +96,7 @@ public class GetSootArgs {
 				"-keep-offset",
 				"-soot-classpath", cp, "-prepend-classpath",
 				"-keep-line-number",
-				"-main-class", args[3],
+				// "-main-class", args[3],
 				// "-process-dir", args[2],
 				// "-process-path", args[0]+"/jre/lib/rt.jar",
 				// "-process-path", args[0]+"/jre/lib/jce.jar",

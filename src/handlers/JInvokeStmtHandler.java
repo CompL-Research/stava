@@ -28,6 +28,11 @@ public class JInvokeStmtHandler {
 		handleExpr(u, expr, ptg, summary);
 	}
 
+	private static int getSummarySize(Map<ObjectNode, EscapeStatus> summary)
+	{
+		return summary.toString().length();
+	}
+
 	public static void handleExpr(Unit u, InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 //		if(expr.getMethod().isJavaLibraryMethod()) {
 //			return;

@@ -17,10 +17,29 @@ import java.util.Map.Entry;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.regex.*;
+
+
 public class StaticAnalyser extends BodyTransformer {
 	public static Map<SootMethod, PointsToGraph> ptgs;
 	public static Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
 	public static LinkedHashMap<Body, Analysis> analysis;
+
+	String[] ignoreFuncs = {
+							// "<java.util.ArrayPrefixHelpers$CumulateTask: compute()V>",
+							// "<java.util.ArrayPrefixHelpers$DoubleCumulateTask: compute()V>",
+							// "<java.util.ArrayPrefixHelpers$IntCumulateTask: compute()V>",
+							// "<java.util.ArrayPrefixHelpers$LongCumulateTask: compute()V>",
+							// "<java.util.concurrent.ConcurrentHashMap: readObject(Ljava/io/ObjectInputStream;)V>",
+							// "<java.util.concurrent.ConcurrentHashMap$TreeBin: <init>(Ljava/util/concurrent/ConcurrentHashMap$TreeNode;)V>",
+							"<java.util.HashMap$TreeNode: treeify([Ljava/util/HashMap$Node;)V>",
+							// "<java.util.concurrent.ConcurrentHashMap: transfer([Ljava/util/concurrent/ConcurrentHashMap$Node;[Ljava/util/concurrent/ConcurrentHashMap$Node;)V>",
+							// "<java.util.concurrent.ConcurrentHashMap$TreeBin: removeTreeNode(Ljava/util/concurrent/ConcurrentHashMap$TreeNode;)Z>",
+							// "<java.util.HashMap$TreeNode: putTreeVal(Ljava/util/HashMap;[Ljava/util/HashMap$Node;ILjava/lang/Object;Ljava/lang/Object;)Ljava/util/HashMap$TreeNode;>",
+							// "<java.util.HashMap$TreeNode: removeTreeNode(Ljava/util/HashMap;[Ljava/util/HashMap$Node;Z)V>"
+							 };
+	
+	List<String> sArrays = Arrays.asList(ignoreFuncs);
 
 	public StaticAnalyser() {
 		super();
@@ -29,19 +48,44 @@ public class StaticAnalyser extends BodyTransformer {
 		summaries = new ConcurrentHashMap<>();
 	}
 
+	private int getSummarySize(HashMap<ObjectNode, EscapeStatus> summary)
+	{
+		return summary.toString().length();
+	}
 
 	@Override
 	protected void internalTransform(Body body, String phasename, Map<String, String> options) {
+		// if (body.getMethod().getBytecodeSignature().toString()
+		// 	.compareTo("<java.util.HashMap$TreeNode: treeify([Ljava/util/HashMap$Node;)V>") != 0)
+		// {
+		// 	return;
+		// }
+		// if ( !this.sArrays.contains(body.getMethod().getBytecodeSignature()))
+		// 	return;
+
 		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 //		if(body.getMethod().getName().contains("<clinit>")){
 //			System.out.println("Skipping this method");
 //			return;
 //		}
+
 		boolean verboseFlag = false;
 //		if(body.getMethod().getBytecodeSignature().equals("<moldyn.md: <init>()V>")) {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
 //		}
+		// System.out.println(body);
+		String dataString = body.toString();
+		Matcher m = Pattern.compile("\n").matcher(dataString);
+		int lines = 1;
+		while (m.find()) 
+			lines++;
+		
+		System.out.println(body.getMethod()+" "+lines);
+		System.out.println(body);
+		// verboseFlag = true;
+		// if (true)
+		// 	return;
 		// System.out.println("func: "+body.getMethod().toString() +" "+ body.getMethod().isJavaLibraryMethod());
 		
 		// if (true) // Ignore Library Methods.
@@ -50,6 +94,7 @@ public class StaticAnalyser extends BodyTransformer {
 		// {
 		// 	return;
 		// }
+		
 		String path = Scene.v().getSootClassPath();
 //		System.out.println(path);
 //		System.out.println("Package:"+body.getMethod().getDeclaringClass().getJavaPackageName());
@@ -129,8 +174,13 @@ public class StaticAnalyser extends BodyTransformer {
 				 */
 				PointsToGraph outNew = new PointsToGraph(inNew);
 				try {
+					// if (verboseFlag) System.out.println("Applied changes to: " + u);
+					// System.out.println("Initial Summary Size: "+ getSummarySize(summary));
 					apply(body.getMethod(), u, outNew, summary);
-//					if (verboseFlag) System.out.println("Applied changes to: " + u);
+					// int sz = getSummarySize(summary);
+					// System.out.println("Final Summary Size: "+ sz);
+					// if (sz > 10000)
+					// 	return;
 				} catch (Exception e) {
 					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
 					System.out.println(s);
@@ -141,11 +191,12 @@ public class StaticAnalyser extends BodyTransformer {
 //					System.out.println(workList);
 					throw e;
 				}
-//				if(verboseFlag) {
-//					System.out.println("at: "+u.toString());
-//					System.out.println("inNew:"+inNew.toString());
-//					System.out.println("outNew:"+outNew.toString());
-//				}
+				if(verboseFlag) {
+					// System.out.println("at: "+u.toString());
+					// System.out.println("inNew:"+inNew.toString());
+					System.out.println("outNew:"+outNew.toString());
+					// System.out.println("summary:"+summary);
+				}
 //				if(bci == 135) {
 //					System.out.println("outNew:"+outNew);
 //				}
@@ -191,7 +242,7 @@ public class StaticAnalyser extends BodyTransformer {
 		PointsToGraph ptg = elem.getValue().getOut();
 		ptgs.put(body.getMethod(), ptg);
 		summaries.put(body.getMethod(), summary);
-		// System.out.println("func: "+body.getMethod().toString());
+		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 	}
 
 	/*

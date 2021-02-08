@@ -11,6 +11,7 @@ import soot.Scene;
 import soot.options.Options;
 import soot.SootMethod;
 import soot.Transform;
+import soot.*;
 import utils.GetListOfNoEscapeObjects;
 import utils.Stats;
 
@@ -48,9 +49,8 @@ public class Main {
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
-		printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 		
-		boolean useNewResolver = false;
+		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
 		// Resolver sr;
 		if(useNewResolver) {
@@ -64,7 +64,7 @@ public class Main {
 			
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			// printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	

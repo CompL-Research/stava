@@ -20,19 +20,26 @@ import soot.jimple.toolkits.callgraph.Targets;
 
 import utils.getBCI;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 /*
  * Meant to be only called by JAssignStmtHandler.
  * The sanitation check to ensure the appropriate types has been skipped for performance.
  */
 public class InvokeStmt {
+	private static int getSummarySize(Map<ObjectNode, EscapeStatus> summary)
+	{
+		return summary.toString().length();
+	}
 	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		AbstractInvokeExpr expr = (AbstractInvokeExpr) rhs;
 		//SootMethod m = expr.getMethod();	// Wrong
 		JInvokeStmtHandler.handleExpr(u, expr, ptg, summary);
+
+		// System.out.println("Size after handleexpr: "+ getSummarySize(summary));
+
 		EscapeStatus es = new EscapeStatus();//(new ConditionalValue(m, new ObjectNode(0, ObjectType.returnValue), Boolean.TRUE));
 		
 		CallGraph cg = Scene.v().getCallGraph();

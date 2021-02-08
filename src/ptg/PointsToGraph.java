@@ -16,6 +16,11 @@ public class PointsToGraph {
 		fields = new HashMap<>();
 	}
 
+	private static int getSummarySize(Map<ObjectNode, EscapeStatus> summary)
+	{
+		return summary.toString().length();
+	}
+
 	@SuppressWarnings("unchecked")
 	public PointsToGraph(PointsToGraph other) {
 		vars = new HashMap<>(other.vars.size());
@@ -260,18 +265,18 @@ public class PointsToGraph {
 				summary.get(o).addEscapeState(cv);
 //				System.out.println("verifying add: "+summary.get(o).toString());
 			} else summary.put(o, new EscapeStatus(cv));
-			recursiveCascadeES(o, summary, done);
+			// recursiveCascadeES(o, cv, summary, done);
 			done.add(o);
 		}
 	}
 
-	public void cascadeES(Local l, Map<ObjectNode, EscapeStatus> summary) {
-		if (!vars.containsKey(l)) return;
-		HashSet<ObjectNode> done = new HashSet<ObjectNode>();
-		vars.get(l).forEach(parent -> recursiveCascadeES(parent, summary, done));
-	}
+	// public void cascadeES(Local l, Map<ObjectNode, EscapeStatus> summary) {
+	// 	if (!vars.containsKey(l)) return;
+	// 	HashSet<ObjectNode> done = new HashSet<ObjectNode>();
+	// 	vars.get(l).forEach(parent -> recursiveCascadeES(parent, summary, done));
+	// }
 
-	public void recursiveCascadeES(ObjectNode parent, Map<ObjectNode, EscapeStatus> summary, HashSet<ObjectNode> done) {
+	public void recursiveCascadeES(ObjectNode parent, ConditionalValue cv,  Map<ObjectNode, EscapeStatus> summary, HashSet<ObjectNode> done) {
 		if (done.contains(parent)) return;
 		if (!fields.containsKey(parent)) return;
 		HashSet<ObjectNode> children = new HashSet<ObjectNode>();
@@ -281,13 +286,25 @@ public class PointsToGraph {
 			 * Conditional values are immutable. So maybe every object
 			 * doesn't require a fresh copy of the same conditional value.
 			 */
-			EscapeStatus es = summary.get(parent).makeField(entry.getKey());
-			entry.getValue().forEach(object -> summary.get(object).addEscapeStatus(es));
+
+			// <parameter,0>
+
+			//  C.f = B 
+			//  B.g = C
+
+			System.out.println("Entries 0: "+entry + " Size: "+getSummarySize(summary));
+			// EscapeStatus es = summary.get(parent).makeField(entry.getKey());
+			System.out.println("Entries 1: "+entry + " Size: "+getSummarySize(summary));
+			// entry.getValue().forEach(object -> summary.get(object).addEscapeStatus(es));
+			entry.getValue().forEach(object -> summary.get(object).addEscapeState(cv));
+			System.out.println("Entries 2: "+entry + " Size: "+getSummarySize(summary));
 			children.addAll(entry.getValue());
+			entry.getValue().forEach(child -> recursiveCascadeES(child, cv.addField(entry.getKey()), summary, done));
 		}
-		done.add(parent);
-		children.remove(parent);
-		children.forEach(child -> recursiveCascadeES(child, summary, done));
+		// System.out.println("RecursiveCascadeCV exit for "+parent+" for size: "+getSummarySize(summary));
+		// done.add(parent);
+		// children.remove(parent);
+		// children.forEach(child -> recursiveCascadeES(child, cv, summary, done));
 	}
 
 	public void propagateES(Local lhs, Local rhs, Map<ObjectNode, EscapeStatus> summary) {
