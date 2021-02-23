@@ -1,4 +1,6 @@
 public class Main {
+
+	static Node g;
 	public static void main(String[] args) {
 		Node A = new Node();
 		Node B = new Node();

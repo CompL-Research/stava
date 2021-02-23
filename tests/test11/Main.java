@@ -6,7 +6,11 @@ public class Main {
 		Node D = new Node();
 		A.n = B;
 		B.n = C;
-		C.n = D;
-		D.n = B;
+		func(A);
+	}
+
+	public static void func(Node p1) {
+		// p2.n = p3;
+		p1.n.n.n = new Node();
 	}
 }
