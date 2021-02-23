@@ -13,6 +13,9 @@ public class GetSootArgs {
 		if(args[3].equals("JDK")) {
 			return jdk(args);
 		}
+		if(args[3].equals("Refl")) {
+			return normal_refl(args);
+		}
 		if (args[1].contains("true") || args[1].contains("True")) {
 			// this is a benchmark
 			if (args[3].contains("Harness")) {
@@ -47,7 +50,7 @@ public class GetSootArgs {
 				"-output-dir", args[4],
 				"-output-format", "jimple",
 				"-x", "jdk.*",
-				"-i", "java.*",
+				// "-i", "java.*",
 				"-include", "org.apache.*",
 				"-include", "org.w3c.*",
 				
@@ -75,6 +78,38 @@ public class GetSootArgs {
 				"-output-dir", args[4],
 				"-output-format", "jimple",
 				"-x", "jdk.*",
+				// "-include", "java.util.HashMap"
+		};
+		for(String s: sootArgs) {
+			System.out.print(s+" ");
+		}
+		System.out.println("");
+		return sootArgs;
+	}
+
+	private String[] normal_refl(String[] args){
+		String dir = args[2] + "/out";
+		String refl_log = "reflection-log:" + dir + "/refl.log";
+		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
+		String[] sootArgs = {
+				"-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-p","cg.spark","on",
+				// "-p","cg","all-reachable",
+				"-p","cg", refl_log,
+				"-keep-offset",
+				"-soot-classpath", cp, 
+				"-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				"-process-dir", args[2],
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+				"-x", "jdk.*",
+				"-x", "java.*",
+				"-x", "sun.*"
 				// "-include", "java.util.HashMap"
 		};
 		for(String s: sootArgs) {
