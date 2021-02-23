@@ -94,19 +94,49 @@ public class JInvokeStmtHandler {
 
 		CallGraph cg = Scene.v().getCallGraph();
 
-		Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
+		// Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
 
-		while(methods.hasNext())
-		{
-			SootMethod method = methods.next().method();
-			List<Value> args = expr.getArgs();
-			for (int i = 0; i < args.size(); i++) {
-				Value arg = args.get(i);
-				if (!(arg.getType() instanceof RefType)) continue;
-				if (arg instanceof Constant) continue;
+		// while(methods.hasNext())
+		// {
+		// 	SootMethod method = methods.next().method();
+		// 	List<Value> args = expr.getArgs();
+		// 	System.out.println("Method invoke: "+method +" from: "+u);
+		// 	for (int i = 0; i < args.size(); i++) {
+		// 		System.out.println(i);
+		// 		Value arg = args.get(i);
+		// 		if ((arg.getType() instanceof RefType) || (arg.getType() instanceof ArrayType) ) {
+		// 			System.out.println(i);
+		// 			if (arg instanceof Constant) continue;
+		// 			System.out.println(i);
+		// 			ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
+		// 			ConditionalValue cv = new ConditionalValue(method, obj, true);
+		// 			ptg.cascadeCV((Local) args.get(i), cv, summary);
+		// 		}
+		// 	}
+		// }
+
+		Iterator<Edge> edges = cg.edgesOutOf(u);
+		List<Value> args = expr.getArgs();
+
+		while(edges.hasNext()) {
+			Edge edge = edges.next();
+			SootMethod method = edge.tgt();
+			int paramCount = method.getParameterCount();
+
+			for (int i = 0; i < paramCount; i++) {
 				ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
 				ConditionalValue cv = new ConditionalValue(method, obj, true);
-				ptg.cascadeCV((Local) args.get(i), cv, summary);
+				
+				if (edge.kind() == Kind.REFL_INVOKE)
+					ptg.cascadeCV((Local) args.get(1), cv, summary);
+				else if(edge.kind() == Kind.REFL_CONSTR_NEWINSTANCE)
+					ptg.cascadeCV((Local) args.get(0), cv, summary);
+				else {
+					Value arg = args.get(i);
+					if (arg.getType() instanceof RefType || arg.getType() instanceof ArrayType)
+						if ( !(arg instanceof Constant) )			// Notice the not(!)
+							ptg.cascadeCV((Local) args.get(i), cv, summary);
+				}
 			}
 		}
 	}

@@ -16,7 +16,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.internal.*;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
-
+import javafx.util.Pair;
 import java.util.*;
 /*
  *
@@ -146,12 +146,20 @@ public class ReworkedResolver{
                             continue;
                         }
                         Iterator<Edge> iter = cg.edgesInto(key);
-                        System.out.println("isempty:"+iter.hasNext());
+                        System.out.println("isempty:"+iter.hasNext()+": "+key);
                         newStates.add(state);
                         while(iter.hasNext()) {
                             Edge edge = iter.next();
                             // System.out.println(key+" "+obj+" "+cstate+" " + +parameternumber + " "+edge.src() );
                             System.out.println("Edge type:" + edge.kind() + " " + key+ " "+edge.srcUnit()+" "+edge.src());
+                            if (edge.kind() == Kind.REFL_CONSTR_NEWINSTANCE){
+                                parameternumber = 0;
+                            }
+                            
+                            else if (edge.kind() == Kind.REFL_INVOKE){
+                                parameternumber = 1;
+                            }
+
                             List<ObjectNode> objects = GetObjects(edge.srcUnit(), parameternumber, edge.src());
                             if (objects == null) {
                                 // Do we need to do something, if we cannot find any objects here?
@@ -490,6 +498,7 @@ public class ReworkedResolver{
 
         EscapeStatus es = ess.get(sobj.getObject());
         if (es != null && es.doesEscape()) {
+            System.err.println("es is escaping.");
             // SetComponent(component, Escape.getInstance());
             return true;
         }
@@ -508,11 +517,31 @@ public class ReworkedResolver{
         if (sobj.getObject().type == ObjectType.parameter || sobj.getObject().type == ObjectType.argument)
             return false;
 
-        for (EscapeState e : es.status) {
-            if (e instanceof ConditionalValue) {
-                ConditionalValue cv = (ConditionalValue) e;
-                if (cv.method == null && cv.object.type == ObjectType.argument )//&& cv.object.ref == -1)
-                    return true;
+        // if (sobj.getObject().type != ObjectType.internal)
+        //     return false;
+        
+        // If any internal object is assigned to the parameter then it is escaping.
+        // Whereas, same argument is not valid for external object,
+        // But if any external object is assigned to static variable, 
+        // then it is escaping.
+
+
+        if (sobj.getObject().type == ObjectType.internal) {
+            for (EscapeState e : es.status) {
+                if (e instanceof ConditionalValue) {
+                    ConditionalValue cv = (ConditionalValue) e;
+                    if (cv.method == null && cv.object.type == ObjectType.argument )//&& cv.object.ref == -1)
+                        return true;
+                }
+            }
+        }
+        else {
+            for (EscapeState e : es.status) {
+                if (e instanceof ConditionalValue) {
+                    ConditionalValue cv = (ConditionalValue) e;
+                    if (cv.method == null && cv.object.type == ObjectType.argument && cv.object.ref == -1)
+                        return true;
+                }
             }
         }
         return false;
@@ -530,12 +559,12 @@ public class ReworkedResolver{
             // }
             if (isReturnObject(sobj)) 
             {
-                // System.err.println("Identified as return obj");
+                System.err.println("Identified as return obj: "+sobj);
                 SetComponent(component, Escape.getInstance());
                 return;
             }
             if (isEscapingObject(sobj)) {
-                // System.err.println("Identified as escaping obj");
+                System.err.println("Identified as escaping obj: "+sobj);
                 SetComponent(component, Escape.getInstance());
                 return;
             }
@@ -552,7 +581,7 @@ public class ReworkedResolver{
                 // }
                 try{
                     if (isEscapingObject(nxt)) {
-                        // System.err.println("Escaping obj: "+nxt);
+                        System.err.println("Escaping obj: "+nxt);
                         SetComponent(component, Escape.getInstance());
                         return;
                     }
@@ -569,7 +598,7 @@ public class ReworkedResolver{
     }
 
     void SetComponent ( List<StandardObject> comp, EscapeState es) {
-        // System.err.println(es);
+        System.err.println("comp:"+comp+" : "+es);
         for (StandardObject s: comp) {
             if (this.solvedSummaries.get(s.getMethod()) != null)
                 this.solvedSummaries.get(s.getMethod()).put(s.getObject(), new EscapeStatus(es));
