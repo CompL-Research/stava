@@ -18,7 +18,5 @@ More instructions [here](https://github.com/42niks/stava/blob/master/scripts/REA
 
 ## Authors
 * [*Nikhil T R*](https://github.com/42niks)
+* [*Dheeraj Yadav*](https://github.com/dheeraj135)
 * [*Manas Thakur*](https://manas.gitlab.io) 
-
-## Acknowledgements
-* [Dheeraj Yadav](https://github.com/dheeraj135) for providing a modified version of [Soot](https://github.com/soot-oss/soot) which enables this project to work smoothly.
