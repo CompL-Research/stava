@@ -78,6 +78,7 @@ public class JInvokeStmtHandler {
 			Value base = invokeExpr.getBase();
 			ConditionalValue cv = new ConditionalValue(invokeExpr.getMethod(), new ObjectNode(-1, ObjectType.parameter), true);
 			ptg.cascadeCV((Local) base, cv, summary);
+			// System.out.println("Virtual call: "+u+" isNative; "+invokeExpr.getMethod().isNative()+" base: "+base);
 		} else if (expr instanceof JInterfaceInvokeExpr) {
 			/*
 			 * Example of JVirtualInvokeExpr:
@@ -121,6 +122,8 @@ public class JInvokeStmtHandler {
 		while(edges.hasNext()) {
 			Edge edge = edges.next();
 			SootMethod method = edge.tgt();
+			// System.out.println("Method: "+method + "isNative: "+method.isNative());
+			boolean isNative = method.isNative();
 			int paramCount = method.getParameterCount();
 
 			for (int i = 0; i < paramCount; i++) {
@@ -134,8 +137,14 @@ public class JInvokeStmtHandler {
 				else {
 					Value arg = args.get(i);
 					if (arg.getType() instanceof RefType || arg.getType() instanceof ArrayType)
-						if ( !(arg instanceof Constant) )			// Notice the not(!)
-							ptg.cascadeCV((Local) args.get(i), cv, summary);
+						if ( !(arg instanceof Constant) )	{		// Notice the not(!) 
+							if (isNative) {
+								System.out.println("Escaping: "+args.get(i));
+								ptg.cascadeEscape((Local) args.get(i), summary);
+							}
+							else
+								ptg.cascadeCV((Local) args.get(i), cv, summary);
+						}
 				}
 			}
 		}

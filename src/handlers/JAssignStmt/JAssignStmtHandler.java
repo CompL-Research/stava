@@ -33,10 +33,10 @@ public class JAssignStmtHandler {
 				}
 				return;
 			} else if (lhs instanceof Local) {
-				// System.out.println(lhs+" is Local");
+				// System.err.println(lhs+" is Local");
 				lhsIsLocal(rhs, u, ptg, summary);
 			} else if (lhs instanceof Ref) {
-				// System.out.println(lhs+" is Ref");
+				// System.err.println(lhs+" is Ref");
 				StoreStmt.handle(u, ptg, summary);
 			} else {
 				AnalysisError.unidentifiedAssignStmtCase(u);
@@ -45,6 +45,7 @@ public class JAssignStmtHandler {
 	}
 
 	private static void lhsIsLocal(Value rhs, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+		// System.err.println(u+" "+rhs.getType());
 		if (rhs instanceof AnyNewExpr) {
 			NewStmt.handle(u, ptg, summary);
 		} else if (rhs instanceof NullConstant) {

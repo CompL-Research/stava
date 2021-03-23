@@ -96,9 +96,15 @@ public class PointsToGraph {
 
 	public void STRONG_makeField(Local lhs, SootField f, Local rhs) {
 		Set<ObjectNode> lhsPtSet = vars.get(lhs);
-		if (lhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		if (lhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		}
 		Set<ObjectNode> rhsPtSet = vars.get(rhs);
-		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		if (rhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		}
 		for(ObjectNode parent : lhsPtSet) {
 			STRONG_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
 		}
@@ -106,9 +112,15 @@ public class PointsToGraph {
 
 	public void WEAK_makeField(Local lhs, SootField f, Local rhs) {
 		Set<ObjectNode> lhsPtSet = vars.get(lhs);
-		if (lhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		if (lhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		}
 		Set<ObjectNode> rhsPtSet = vars.get(rhs);
-		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		if (rhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		}
 		for(ObjectNode parent : lhsPtSet) {
 			WEAK_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
 		}
@@ -192,12 +204,13 @@ public class PointsToGraph {
 
 	public void union(PointsToGraph other) {
 		for (Map.Entry<Local, Set<ObjectNode>> entry : other.vars.entrySet()) {
-			if (vars.containsKey(entry.getKey())) {
+			if (vars.containsKey(entry.getKey()) && entry.getValue() != null) {
 				if (!vars.get(entry.getKey()).equals(entry.getValue())) {
 					vars.get(entry.getKey()).addAll(entry.getValue());
 				}
 			} else {
-				vars.put(entry.getKey(), new HashSet<>(entry.getValue()));
+				if (entry.getValue() != null)
+					vars.put(entry.getKey(), new HashSet<>(entry.getValue()));
 			}
 		}
 		for (Map.Entry<ObjectNode, Map<SootField, Set<ObjectNode>>> entry : other.fields.entrySet()) {
@@ -309,6 +322,9 @@ public class PointsToGraph {
 
 	public void propagateES(Local lhs, Local rhs, Map<ObjectNode, EscapeStatus> summary) {
 		EscapeStatus es1 = new EscapeStatus();
+		if (! vars.containsKey(lhs) ) {
+			return;
+		}
 		for (ObjectNode parent : vars.get(lhs)) {
 			es1.addEscapeStatus(summary.get(parent));
 		}
@@ -376,10 +392,12 @@ public class PointsToGraph {
 
 	public void storeStmtArrayRef(Local lhs, Local rhs) {
 		if (!vars.containsKey(lhs)) {
-			throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
+			return;
+			// throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
 		}
 		if (!vars.containsKey(rhs)) {
-			throw new IllegalArgumentException("ptset for " + rhs.toString() + " Does not exist!");
+			return;
+			// throw new IllegalArgumentException("ptset for " + rhs.toString() + " Does not exist!");
 		}
 		vars.get(lhs).forEach(parent -> {
 			if (!fields.containsKey(parent)) fields.put(parent, new HashMap<>());
@@ -396,7 +414,8 @@ public class PointsToGraph {
 
 	public void storeStmtArrayRef(Local lhs, ObjectNode obj) {
 		if (!vars.containsKey(lhs)) {
-			throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
+			return;
+			// throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
 		}
 		vars.get(lhs).forEach(parent -> {
 			if (!fields.containsKey(parent)) fields.put(parent, new HashMap<>());

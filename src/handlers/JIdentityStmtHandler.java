@@ -42,7 +42,7 @@ public class JIdentityStmtHandler {
 			ptg.forcePutVar((Local) lhs, obj);
 			cvobj = new ObjectNode(-1, ObjectType.argument);
 		} else if (rhs instanceof JCaughtExceptionRef && lhs instanceof Local) {
-//			System.out.println("[JIdentitiyStmtHandler] Warning: caughtexception is assigned to "+lhs.toString());
+			// System.err.println("[JIdentitiyStmtHandler] Warning: caughtexception is assigned to "+lhs.toString());
 			obj = new ObjectNode(-1, ObjectType.external);
 			ptg.forcePutVar((Local) lhs, obj);
 			EscapeStatus e = new EscapeStatus();

@@ -54,12 +54,16 @@ public class ReworkedResolver{
     Map<StandardObject, Set<StandardObject> > graph;
     Map<StandardObject, Set<StandardObject> > revgraph;
 
+    List<SootMethod> noBCIMethods;
+
     List<StandardObject> reverseTopoOrder;
     
     public ReworkedResolver(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries,
-            Map<SootMethod, PointsToGraph> ptgs) {
+            Map<SootMethod, PointsToGraph> ptgs,
+            List<SootMethod> escapingMethods) {
         this.existingSummaries = existingSummaries;
         this.ptgs = ptgs;
+        this.noBCIMethods = escapingMethods;
 
         System.out.println(this.existingSummaries);
 
@@ -146,12 +150,13 @@ public class ReworkedResolver{
                             continue;
                         }
                         Iterator<Edge> iter = cg.edgesInto(key);
-                        System.out.println("isempty:"+iter.hasNext()+": "+key);
+                        // System.out.println("isempty:"+iter.hasNext()+": "+key);
                         newStates.add(state);
                         while(iter.hasNext()) {
+                            parameternumber = cstate.object.ref;
                             Edge edge = iter.next();
                             // System.out.println(key+" "+obj+" "+cstate+" " + +parameternumber + " "+edge.src() );
-                            System.out.println("Edge type:" + edge.kind() + " " + key+ " "+edge.srcUnit()+" "+edge.src());
+                            // System.out.println("Edge type:" + edge.kind() + " " + key+ " "+edge.srcUnit()+" "+edge.src());
                             if (edge.kind() == Kind.REFL_CONSTR_NEWINSTANCE){
                                 parameternumber = 0;
                             }
@@ -159,8 +164,13 @@ public class ReworkedResolver{
                             else if (edge.kind() == Kind.REFL_INVOKE){
                                 parameternumber = 1;
                             }
-
-                            List<ObjectNode> objects = GetObjects(edge.srcUnit(), parameternumber, edge.src());
+                            List<ObjectNode> objects;
+                            try {
+                            objects = GetObjects(edge.srcUnit(), parameternumber, edge.src());
+                            } catch (Exception e) {
+                                System.err.println("Cond: "+cstate+ " "+cstate.object+" "+cstate.object.ref+" "+parameternumber);
+                                throw e;
+                            }
                             if (objects == null) {
                                 // Do we need to do something, if we cannot find any objects here?
                                 System.err.println("Objects are null!.");
@@ -491,6 +501,7 @@ public class ReworkedResolver{
      *  returned is allocated in that function.
      */
     boolean isEscapingObject( StandardObject sobj) {
+
         HashMap<ObjectNode, EscapeStatus> ess = this.solvedSummaries.get(sobj.getMethod());
         
         if (ess == null)
@@ -500,6 +511,9 @@ public class ReworkedResolver{
         if (es != null && es.doesEscape()) {
             System.err.println("es is escaping.");
             // SetComponent(component, Escape.getInstance());
+            return true;
+        }
+        if (this.noBCIMethods.contains(sobj.getMethod())) {
             return true;
         }
         return isAssignedToThis(sobj);
@@ -579,7 +593,7 @@ public class ReworkedResolver{
                 //     return;
                 //     // continue;
                 // }
-                try{
+                try {
                     if (isEscapingObject(nxt)) {
                         System.err.println("Escaping obj: "+nxt);
                         SetComponent(component, Escape.getInstance());

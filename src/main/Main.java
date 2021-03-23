@@ -42,6 +42,8 @@ public class Main {
 		long analysis_start = System.currentTimeMillis();
 		Options.v().parse(sootArgs);
 		Scene.v().loadNecessaryClasses();
+		SootClass s = Scene.v().getSootClass("org.xml.sax.helpers.SecuritySupport");
+		System.err.println(s.getMethods());
 		System.out.println("Application Classes: "+Scene.v().getApplicationClasses().size());
 		PackManager.v().runPacks();
 		// soot.Main.main(sootArgs);
@@ -55,7 +57,8 @@ public class Main {
 		// Resolver sr;
 		if(useNewResolver) {
 			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
-											staticAnalyser.ptgs);
+											staticAnalyser.ptgs,
+											staticAnalyser.noBCIMethods);
 			long res_end = System.currentTimeMillis();
 			System.out.println("Resolution is done");
 			System.out.println("Time Taken:"+(res_end-res_start)/1000F);

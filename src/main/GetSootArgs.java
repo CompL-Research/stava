@@ -46,14 +46,21 @@ public class GetSootArgs {
 				"-keep-line-number",
 				"-main-class", args[3],
 				"-process-dir", dir,
+				"-p","cg.spark","on",
 				"-p", "cg", refl_log,
 				"-output-dir", args[4],
 				"-output-format", "jimple",
-				"-x", "jdk.*",
-				// "-i", "java.*",
-				"-include", "org.apache.*",
-				"-include", "org.w3c.*",
-				
+				// "-x", "jdk.*",
+				// "-x", "org.eclipse.jdt.internal.*",
+				"-i", "jdk.*",
+				"-i", "java.*",
+				"-i", "org.*",
+				// "-include", "org.apache.batik.*",
+				// "-x", "org.apache.crimson.*",
+				// "-include", "org.w3c.*",
+				// "-include", "org.apache.*",
+				"-i", "com.*",
+				"-i", "javax.*",
 		};
 		for(String s: sootArgs) {
 			System.out.print(s+" ");

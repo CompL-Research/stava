@@ -1,10 +1,13 @@
 package analyser;
 
 import es.EscapeStatus;
+import es.Escape;
+import es.NoEscape;
 import handlers.JAssignStmt.JAssignStmtHandler;
 import handlers.*;
 import ptg.*;
 import soot.*;
+import utils.IllegalBCIException;
 import soot.jimple.MonitorStmt;
 import soot.jimple.internal.*;
 import soot.toolkits.graph.BriefUnitGraph;
@@ -21,10 +24,11 @@ import java.util.regex.*;
 
 
 public class StaticAnalyser extends BodyTransformer {
+	private boolean allNonEscaping;
 	public static Map<SootMethod, PointsToGraph> ptgs;
 	public static Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
 	public static LinkedHashMap<Body, Analysis> analysis;
-
+	public static List<SootMethod> noBCIMethods; 
 	String[] ignoreFuncs = {
 							// "<java.util.ArrayPrefixHelpers$CumulateTask: compute()V>",
 							// "<java.util.ArrayPrefixHelpers$DoubleCumulateTask: compute()V>",
@@ -32,12 +36,19 @@ public class StaticAnalyser extends BodyTransformer {
 							// "<java.util.ArrayPrefixHelpers$LongCumulateTask: compute()V>",
 							// "<java.util.concurrent.ConcurrentHashMap: readObject(Ljava/io/ObjectInputStream;)V>",
 							// "<java.util.concurrent.ConcurrentHashMap$TreeBin: <init>(Ljava/util/concurrent/ConcurrentHashMap$TreeNode;)V>",
-							"<java.util.HashMap$TreeNode: treeify([Ljava/util/HashMap$Node;)V>",
+							// "<java.util.HashMap$TreeNode: treeify([Ljava/util/HashMap$Node;)V>",
 							// "<java.util.concurrent.ConcurrentHashMap: transfer([Ljava/util/concurrent/ConcurrentHashMap$Node;[Ljava/util/concurrent/ConcurrentHashMap$Node;)V>",
 							// "<java.util.concurrent.ConcurrentHashMap$TreeBin: removeTreeNode(Ljava/util/concurrent/ConcurrentHashMap$TreeNode;)Z>",
 							// "<java.util.HashMap$TreeNode: putTreeVal(Ljava/util/HashMap;[Ljava/util/HashMap$Node;ILjava/lang/Object;Ljava/lang/Object;)Ljava/util/HashMap$TreeNode;>",
 							// "<java.util.HashMap$TreeNode: removeTreeNode(Ljava/util/HashMap;[Ljava/util/HashMap$Node;Z)V>"
-							 };
+
+
+
+							// "<org.apache.jasper.servlet.JspCServletContext: getResource(Ljava/lang/String;)Ljava/net/URL;>"
+							// "<org.apache.jasper.compiler.ImplicitTagLibraryInfo: <init>(Lorg/apache/jasper/JspCompilationContext;Lorg/apache/jasper/compiler/ParserController;Lorg/apache/jasper/compiler/PageInfo;Ljava/lang/String;Ljava/lang/String;Lorg/apache/jasper/compiler/ErrorDispatcher;)V>"
+							// "<org.apache.crimson.util.MessageCatalog: getMessage(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;>",
+							"<org.eclipse.osgi.internal.loader.BundleLoader: createBCL(Lorg/eclipse/osgi/framework/adaptor/BundleProtectionDomain;[Ljava/lang/String;)Lorg/eclipse/osgi/framework/adaptor/BundleClassLoader;>"
+							};
 	
 	List<String> sArrays = Arrays.asList(ignoreFuncs);
 
@@ -46,6 +57,8 @@ public class StaticAnalyser extends BodyTransformer {
 		analysis = new LinkedHashMap<>();
 		ptgs = new ConcurrentHashMap<>();
 		summaries = new ConcurrentHashMap<>();
+		noBCIMethods = new ArrayList<>();
+		allNonEscaping = false;
 	}
 
 	private int getSummarySize(HashMap<ObjectNode, EscapeStatus> summary)
@@ -75,13 +88,13 @@ public class StaticAnalyser extends BodyTransformer {
 //			System.out.println(body.getMethod().toString());
 //		}
 		// System.out.println(body);
-		String dataString = body.toString();
-		Matcher m = Pattern.compile("\n").matcher(dataString);
-		int lines = 1;
-		while (m.find()) 
-			lines++;
+		// String dataString = body.toString();
+		// Matcher m = Pattern.compile("\n").matcher(dataString);
+		// int lines = 1;
+		// while (m.find()) 
+		// 	lines++;
 		
-		System.out.println(body.getMethod()+" "+lines);
+		// System.out.println(body.getMethod()+" "+lines);
 		System.out.println(body);
 		// verboseFlag = true;
 		// if (true)
@@ -120,7 +133,10 @@ public class StaticAnalyser extends BodyTransformer {
 
 		int i = 0;
 		while (!workListNext.isEmpty()) {
-			if(i==1000) System.out.println("Crossed "+i+" loops");
+			if(i == 1000) {
+				System.out.println("Crossed "+i+" loops");
+				return;
+			}
 //			if (verboseFlag) {
 //				System.out.println("Loop " + i);
 //				System.out.println("Worklist:");
@@ -157,10 +173,15 @@ public class StaticAnalyser extends BodyTransformer {
 				 * 1. inNew = union(out[predecessors])
 				 */
 				PointsToGraph inNew = new PointsToGraph();
+				// System.err.println("--------------------------------");
 				for (Unit pred : cfg.getPredsOf(u)) {
-//					if(u.toString().contains("$r14 := @caughtexception")){
-//						System.out.println("Predecessor of our unit is:"+pred);
-//					}
+					// if(u.toString().contains("$r14 := @caughtexception")){
+						// System.err.println("Predecessor of our unit is:"+pred+ " "+flowSets.get(pred).getOut());
+						// System.err.println("Pred of pred: "+cfg.getPredsOf(pred) );
+						// for (Unit t: cfg.getPredsOf(pred)) {
+						// 	System.err.println(t+"::::"+flowSets.get(t).getOut());
+						// }
+					// }
 					inNew.union(flowSets.get(pred).getOut());
 				}
 				if (inNew.equals(flowSet.getIn()) && !inNew.isEmpty()) {
@@ -176,24 +197,35 @@ public class StaticAnalyser extends BodyTransformer {
 				try {
 					// if (verboseFlag) System.out.println("Applied changes to: " + u);
 					// System.out.println("Initial Summary Size: "+ getSummarySize(summary));
+					// System.err.println(u);
+					// System.err.println("outNew:"+outNew);
 					apply(body.getMethod(), u, outNew, summary);
+					// System.err.println("outNew:"+outNew);
 					// int sz = getSummarySize(summary);
 					// System.out.println("Final Summary Size: "+ sz);
 					// if (sz > 10000)
 					// 	return;
+				} catch (IllegalBCIException e) {
+					noBCIMethods.add(body.getMethod());
+					setParamsAsEscaping(body.getMethod(),summary);
+					summaries.put(body.getMethod(), summary);
+					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
+					System.err.println(s);
+					System.err.println(e);
+					return;
 				} catch (Exception e) {
 					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
-					System.out.println(s);
-					System.out.println("inNew:"+inNew);
-					System.out.println("outNew:"+outNew);
-					System.out.println("body:"+body);
-					System.out.println("summary:"+summary);
+					System.err.println(s);
+					System.err.println("inNew:"+inNew);
+					System.err.println("outNew:"+outNew);
+					System.err.println("body:"+body);
+					// System.err.println("summary:"+summary);
 //					System.out.println(workList);
 					throw e;
 				}
 				if(verboseFlag) {
-					// System.out.println("at: "+u.toString());
-					// System.out.println("inNew:"+inNew.toString());
+					System.out.println("at: "+u.toString());
+					System.out.println("inNew:"+inNew.toString());
 					System.out.println("outNew:"+outNew.toString());
 					// System.out.println("summary:"+summary);
 				}
@@ -211,7 +243,9 @@ public class StaticAnalyser extends BodyTransformer {
 				if (!outNew.equals(flowSet.getOut())) {
 //					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutNew is new:"+outNew.toString());
 					workListNext.addAll(cfg.getSuccsOf(u));
-					flowSet.setOut(outNew);
+					// System.err.println("Succ of "+u+" "+cfg.getSuccsOf(u));
+					// flowSet.setOut(outNew);
+					flowSet.getOut().union(outNew);
 				} else {
 //					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutOld (remains same):"+flowSet.getOut().toString());
 				}
@@ -241,8 +275,25 @@ public class StaticAnalyser extends BodyTransformer {
 		while (iterator.hasNext()) elem = iterator.next();
 		PointsToGraph ptg = elem.getValue().getOut();
 		ptgs.put(body.getMethod(), ptg);
+		if (allNonEscaping) {
+			markAsNonEscaping(summary);
+		}
 		summaries.put(body.getMethod(), summary);
 		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
+	}
+
+	private void markAsNonEscaping(Map<ObjectNode, EscapeStatus> summary) {
+		EscapeStatus es = new EscapeStatus(NoEscape.getInstance());
+		for (ObjectNode obj: summary.keySet()) {
+			summary.put(obj, es);
+		}
+	}
+
+	private void setParamsAsEscaping(SootMethod m, Map<ObjectNode, EscapeStatus> summary) {
+		summary.clear();
+		for (int i=0; i< m.getParameterCount(); i++) {
+			summary.put(new ObjectNode(i, ObjectType.parameter), new EscapeStatus(Escape.getInstance()));
+		}
 	}
 
 	/*
@@ -252,6 +303,7 @@ public class StaticAnalyser extends BodyTransformer {
 	 */
 
 	public void apply(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+		// System.err.println(u+" "+u.getClass().getName());
 		if (u instanceof JAssignStmt) {
 			JAssignStmtHandler.handle(u, ptg, summary);
 		} else if (u instanceof JIdentityStmt) {
