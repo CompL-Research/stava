@@ -16,9 +16,11 @@ import soot.jimple.toolkits.callgraph.Targets;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class JInvokeStmtHandler {
-
+	public static ConcurrentHashMap<SootMethod, List<Local> > nativeLocals = new ConcurrentHashMap<>();
 	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		/*
 		 * All method calls.
@@ -88,9 +90,18 @@ public class JInvokeStmtHandler {
 			Value base = invokeExpr.getBase();
 			ConditionalValue cv = new ConditionalValue(invokeExpr.getMethod(), new ObjectNode(-1, ObjectType.parameter), true);
 			ptg.cascadeCV((Local) base, cv, summary);
-		} else {
-			System.out.println("Unidentified invoke expr: " + expr.toString());
-			throw new IllegalArgumentException(expr.toString());
+		// } else if (expr instanceof JDynamicInvokeExpr) {
+		// 	throw new IllegalBCIException("JDynamicInvokeExpr");
+		}else {
+			System.err.println("Unidentified invoke expr: " + expr.toString());
+			CallGraph cg = Scene.v().getCallGraph();
+			Iterator<Edge> edges = cg.edgesOutOf(u);
+			System.err.println("CG Empty: "+edges.hasNext());
+			while (edges.hasNext()) {
+				Edge edge = edges.next();
+				System.err.println("Calling function: "+edge.tgt());
+			}
+			// throw new IllegalArgumentException(expr.toString());
 		}
 
 		CallGraph cg = Scene.v().getCallGraph();
@@ -122,6 +133,7 @@ public class JInvokeStmtHandler {
 		while(edges.hasNext()) {
 			Edge edge = edges.next();
 			SootMethod method = edge.tgt();
+			SootMethod srcMethod = edge.src();
 			// System.out.println("Method: "+method + "isNative: "+method.isNative());
 			boolean isNative = method.isNative();
 			int paramCount = method.getParameterCount();
@@ -141,6 +153,8 @@ public class JInvokeStmtHandler {
 							if (isNative) {
 								System.out.println("Escaping: "+args.get(i));
 								ptg.cascadeEscape((Local) args.get(i), summary);
+								nativeLocals.putIfAbsent(srcMethod,new ArrayList<>());
+								nativeLocals.get(srcMethod).add((Local)args.get(i));
 							}
 							else
 								ptg.cascadeCV((Local) args.get(i), cv, summary);

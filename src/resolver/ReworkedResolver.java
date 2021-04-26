@@ -16,7 +16,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.internal.*;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
-import javafx.util.Pair;
+// import javafx.util.Pair;
 import java.util.*;
 /*
  *
@@ -318,19 +318,22 @@ public class ReworkedResolver{
                 }
             }
         }
-
-        List<Pair<StandardObject, StandardObject> > toAlter = new ArrayList<>();
+        /*
+         *  Find the objects passed and the respective dummy nodes, and match every field.
+         * 
+         */
+        List<StandardObject[] > toAlter = new ArrayList<>();
         for (StandardObject obj1: this.graph.keySet()) {
             for (StandardObject obj2: this.graph.get(obj1)) {
                 if (obj2.getObject().type == ObjectType.parameter) {
-                    toAlter.add(new Pair<StandardObject,StandardObject>(obj1, obj2));
+                    toAlter.add(new StandardObject[]{obj1, obj2});
                 }
             }
         }
 
-        for (Pair<StandardObject, StandardObject> obj :toAlter)
+        for (StandardObject[] obj :toAlter)
         {
-            matchObjs(obj.getKey(), obj.getValue());
+            matchObjs(obj[0], obj[1]);
         }
 
         for (StandardObject key: this.graph.keySet()) {

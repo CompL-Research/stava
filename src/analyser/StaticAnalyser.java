@@ -161,7 +161,6 @@ public class StaticAnalyser extends BodyTransformer {
 			 * 		add successors to workListNext
 			 * 		out[u] = outNew
 			 */
-			ObjectNode scrutinyObject = new ObjectNode(17, ObjectType.internal);
 			Iterator<Unit> iterator = workList.iterator();
 			while (iterator.hasNext()) {
 				Unit u = iterator.next();
@@ -277,14 +276,26 @@ public class StaticAnalyser extends BodyTransformer {
 		ptgs.put(body.getMethod(), ptg);
 		if (allNonEscaping) {
 			markAsNonEscaping(summary);
+			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, ptg);
 		}
 		summaries.put(body.getMethod(), summary);
 		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 	}
 
+	private void markAsEscaping(List<Local> nativeList, Map<ObjectNode, EscapeStatus> summary, PointsToGraph ptg) {
+		if (nativeList == null) 
+			return;
+		for (Local obj: nativeList) {
+			// System.out.println(ptg);
+			// System.out.println(summary);
+			// System.out.println("Escap: "+obj);
+			ptg.cascadeEscape(obj, summary);
+		}
+	}
+
 	private void markAsNonEscaping(Map<ObjectNode, EscapeStatus> summary) {
-		EscapeStatus es = new EscapeStatus(NoEscape.getInstance());
 		for (ObjectNode obj: summary.keySet()) {
+			EscapeStatus es = new EscapeStatus(NoEscape.getInstance());
 			summary.put(obj, es);
 		}
 	}

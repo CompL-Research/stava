@@ -21,7 +21,11 @@ public class GetSootArgs {
 			if (args[3].contains("Harness")) {
 				// the benchmark is dacapo
 				return dacapo(args);
-			} else {
+			} 
+			else if (args[3].contains("JBB") ) {
+				return jbb(args);
+			}
+			else {
 				return normal(args);
 			}
 		} else {
@@ -32,8 +36,92 @@ public class GetSootArgs {
 	private String[] dacapo(String[] args){
 		String dir = args[2] + "/out";
 		String refl_log = "reflection-log:" + dir + "/refl.log";
+		// String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String cp = dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String[] sootArgs = {
+				"-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-no-bodies-for-excluded",
+				"-keep-offset",
+				"-soot-classpath", cp, 
+				"-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				"-process-dir", dir,
+				"-p","cg.spark","on",
+				"-p", "cg", refl_log,
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+				"-ire",
+				// "-x", "jdk.*",
+				// "-x", "org.eclipse.jdt.internal.*",
+				// "-include", "org.apache.batik.*",
+				// "-x", "org.apache.crimson.*",
+				// "-include", "org.w3c.*",
+				// "-include", "org.apache.*",
+				"-i", "jdk.*",
+				"-i", "java.*",
+				"-i", "org.*",
+				"-i", "com.*",
+				"-i", "sun.*",
+				// "-i", "javax.*",
+		};
+		for(String s: sootArgs) {
+			System.out.print(s+" ");
+		}
+		System.out.println("");
+		return sootArgs;
+	}
+
+	private String[] jbb(String[] args){
+		String dir = args[2] ;
+		// String refl_log = "reflection-log:" + dir + "/refl.log";
+		// String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String cp = dir + ":" + args[2] + "/jbb.jar"+":"+args[2]+"/check.jar";//+":"+args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
+		String[] sootArgs = {
+				"-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-no-bodies-for-excluded",
+				"-keep-offset",
+				"-cp", cp,
+				"-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				"-process-dir", dir+"/jbb.jar",
+				"-p","cg.spark","on",
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+				// "-x", "jdk.*",
+				// "-x", "org.eclipse.jdt.internal.*",
+				// "-include", "org.apache.batik.*",
+				// "-x", "org.apache.crimson.*",
+				// "-include", "org.w3c.*",
+				// "-include", "org.apache.*",
+				// "-i", "spec.*",
+				"-i", "jdk.*",
+				"-i", "java.*",
+				"-i", "org.*",
+				"-i", "com.*",
+				"-i", "sun.*",
+				// "-i", "javax.*",
+		};
+		for(String s: sootArgs) {
+			System.out.print(s+" ");
+		}
+		System.out.println("");
+		return sootArgs;
+	}
+
+	private String[] dacapoJava11(String[] args){
+		String dir = args[2] + "/out";
+		String refl_log = "reflection-log:" + dir + "/refl.log";
 		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
 		// String cp = dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String modulePath = dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
 		String[] sootArgs = {
 				"-whole-program",
 				"-app",
@@ -52,15 +140,15 @@ public class GetSootArgs {
 				"-output-format", "jimple",
 				// "-x", "jdk.*",
 				// "-x", "org.eclipse.jdt.internal.*",
-				"-i", "jdk.*",
-				"-i", "java.*",
-				"-i", "org.*",
 				// "-include", "org.apache.batik.*",
 				// "-x", "org.apache.crimson.*",
 				// "-include", "org.w3c.*",
 				// "-include", "org.apache.*",
-				"-i", "com.*",
-				"-i", "javax.*",
+				"-x", "jdk.*",
+				// "-i", "java.*",
+				// "-i", "org.*",
+				// "-i", "com.*",
+				// "-i", "javax.*",
 		};
 		for(String s: sootArgs) {
 			System.out.print(s+" ");
@@ -68,6 +156,7 @@ public class GetSootArgs {
 		System.out.println("");
 		return sootArgs;
 	}
+
 	private String[] normal(String[] args){
 		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar";
 		String[] sootArgs = {
@@ -84,7 +173,11 @@ public class GetSootArgs {
 				"-process-dir", args[2],
 				"-output-dir", args[4],
 				"-output-format", "jimple",
-				"-x", "jdk.*",
+				"-i", "jdk.*",
+				"-i", "java.*",
+				"-i", "org.*",
+				"-i", "com.*",
+				"-i", "sun.*",
 				// "-include", "java.util.HashMap"
 		};
 		for(String s: sootArgs) {
@@ -111,12 +204,14 @@ public class GetSootArgs {
 				"-prepend-classpath",
 				"-keep-line-number",
 				"-main-class", args[3],
-				"-process-dir", args[2],
+				"-process-dir", dir,
 				"-output-dir", args[4],
 				"-output-format", "jimple",
-				"-x", "jdk.*",
-				"-x", "java.*",
-				"-x", "sun.*"
+				"-i", "jdk.*",
+				"-i", "java.*",
+				"-i", "org.*",
+				"-i", "com.*",
+				"-i", "sun.*",
 				// "-include", "java.util.HashMap"
 		};
 		for(String s: sootArgs) {
