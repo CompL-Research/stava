@@ -9,7 +9,7 @@ import soot.tagkit.BytecodeOffsetTag;
 import soot.tagkit.Tag;
 
 public class getBCI {
-	public static int get(Unit u) {
+	public static int get(Unit u) throws IllegalBCIException{
 		int _ret = -1;
 
 		/*
@@ -21,6 +21,8 @@ public class getBCI {
 
 			Do We need to include JNew in this?
 		*/
+		// System.err.println("[GETBCI]: for "+u);
+		// System.err.println("Boxes: "+u.getUseBoxes());
 		for(ValueBox ub: u.getUseBoxes() ) {
 			/*
 				This loop is to get the BCI specifically in the case of JNewArrayExpr and JNewMultiArrayExpr.
@@ -30,17 +32,19 @@ public class getBCI {
 			*/
 			if ( !ub.getClass().toString().equals("class soot.jimple.internal.JAssignStmt$LinkedRValueBox") )
 				continue;
-				
+	
 			/*
 				Next get the value contained in this box. If this value is a New Array/MultiArray Expr only
 				then we need to move further.
 			 */
             Value v = ub.getValue();
             if (v == null)
-                continue;
+				continue;
+			
+			// System.err.println(v.getClass().getName());
             if ( ! (v instanceof JNewArrayExpr || v instanceof JNewMultiArrayExpr ) )
                 continue;
-
+			// System.err.println("This is a new ArrayEXpr, tags: "+ub.getTags());
 			/*
 				Because multiple statements in the Java classfile can be combined together to form 
 				one JimpleStatment, BCI is linked to each box rather than the Unit. BCI of a Unit is 
@@ -57,7 +61,7 @@ public class getBCI {
 		if (t == null) {
 			String error = u.toString() + " doesn't have bytecodeoffset!";
 			System.out.println("[utils.getBCI] [Warn] " + error);
-			throw new IllegalArgumentException(error);
+			throw new IllegalBCIException(error);
 		}
 		try {
 			_ret = ((BytecodeOffsetTag) u.getTag("BytecodeOffsetTag")).getBytecodeOffset();

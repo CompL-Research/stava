@@ -9,6 +9,7 @@ import soot.Local;
 import soot.PrimType;
 import soot.Unit;
 import soot.Value;
+import soot.SootMethod;
 import soot.jimple.ParameterRef;
 import soot.jimple.ThisRef;
 import soot.jimple.internal.JCaughtExceptionRef;
@@ -17,7 +18,7 @@ import soot.jimple.internal.JIdentityStmt;
 import java.util.Map;
 
 public class JIdentityStmtHandler {
-	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public static void handle(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		JIdentityStmt stmt = (JIdentityStmt) u;
 		Value lhs = stmt.getLeftOp();
 		if (lhs.getType() instanceof PrimType) return;
@@ -41,7 +42,7 @@ public class JIdentityStmtHandler {
 			ptg.forcePutVar((Local) lhs, obj);
 			cvobj = new ObjectNode(-1, ObjectType.argument);
 		} else if (rhs instanceof JCaughtExceptionRef && lhs instanceof Local) {
-//			System.out.println("[JIdentitiyStmtHandler] Warning: caughtexception is assigned to "+lhs.toString());
+			// System.err.println("[JIdentitiyStmtHandler] Warning: caughtexception is assigned to "+lhs.toString());
 			obj = new ObjectNode(-1, ObjectType.external);
 			ptg.forcePutVar((Local) lhs, obj);
 			EscapeStatus e = new EscapeStatus();

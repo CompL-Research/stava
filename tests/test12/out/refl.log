@@ -1,0 +1,6 @@
+Constructor.newInstance;<Test: void <init>(java.lang.String)>;Refl.main;77;isAccessible=false;
+Field.set*;<Test: java.lang.String s>;Refl.main;109;isAccessible=true;
+Method.invoke;<Test: void method1()>;Refl.main;116;isAccessible=false;
+Method.invoke;<Test: void method2(int)>;Refl.main;96;isAccessible=false;
+Method.invoke;<Test: void method3()>;Refl.main;128;isAccessible=true;
+Method.invoke;<Test: void method4(C1,C1)>;Refl.main;133;isAccessible=false;

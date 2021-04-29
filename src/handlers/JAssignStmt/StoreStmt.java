@@ -33,10 +33,16 @@ public class StoreStmt {
 		JAssignStmt stmt = (JAssignStmt) u;
 		Value lhs = stmt.getLeftOp();
 		Value rhs = stmt.getRightOp();
+
+		// if (rhs instanceof Local) {
+		// 	ptg.cascadeEscape((Local)rhs, summary);
+		// 	return;
+		// }
+
 		if (lhs instanceof JInstanceFieldRef) {
 			lhsIsJInstanceFieldRef(rhs, u, ptg, summary);
 		} else if (lhs instanceof StaticFieldRef) {
-			if (rhs instanceof StringConstant || rhs instanceof NullConstant) {
+			if (rhs instanceof StringConstant || rhs instanceof NullConstant || rhs instanceof ClassConstant) {
 				// Nothing to do!
 			} else if (rhs instanceof Local) {
 				StaticStoreStmt(u, ptg, summary);
@@ -61,7 +67,12 @@ public class StoreStmt {
 			eraseFieldRefStmt(u, ptg, summary);
 		} else if (rhs instanceof Local) {
 			storeStmt(u, ptg, summary);
-		} else AnalysisError.unidentifiedAssignStmtCase(u);
+		} else if (rhs instanceof ClassConstant) {
+			storeClassConstantToInstanceFieldRefStmt(u, ptg, summary);
+		}
+		else {
+			AnalysisError.unidentifiedAssignStmtCase(u);
+		}
 	}
 
 	/*
@@ -111,6 +122,23 @@ public class StoreStmt {
 			throw new IllegalArgumentException("Object received from factory is not of required type: external");
 		}
 		ptg.storeStmtArrayRef((Local) lhs.getBase(), obj);
+		summary.put(obj, new EscapeStatus(Escape.getInstance()));
+	}
+
+	private static void storeClassConstantToInstanceFieldRefStmt(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+		JInstanceFieldRef lhs = (JInstanceFieldRef) ((JAssignStmt) u).getLeftOp();
+		ObjectNode obj = ObjectFactory.getObj(u);
+		if (obj.type != ObjectType.internal) {
+			System.out.println("At unit:" + u);
+			throw new IllegalArgumentException("Object received from factory is not of required type: internal");
+		}
+
+		if(AssignStmtHandler.STORE == UpdateType.STRONG) {
+			ptg.STRONG_makeField((Local) lhs.getBase(), lhs.getField(), obj);
+		} else {
+			ptg.WEAK_makeField((Local) lhs.getBase(), lhs.getField(), obj);
+		}
+
 		summary.put(obj, new EscapeStatus(Escape.getInstance()));
 	}
 

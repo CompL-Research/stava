@@ -9,25 +9,41 @@ import soot.*;
 import soot.jimple.Constant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.internal.*;
+import soot.jimple.toolkits.callgraph.CallGraph;
+import soot.jimple.toolkits.callgraph.Edge;
+import soot.jimple.toolkits.callgraph.Targets;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class JInvokeStmtHandler {
-
+	public static ConcurrentHashMap<SootMethod, List<Local> > nativeLocals = new ConcurrentHashMap<>();
 	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		/*
 		 * All method calls.
 		 */
 		JInvokeStmt stmt = (JInvokeStmt) u;
 		InvokeExpr expr = stmt.getInvokeExpr();
-		handleExpr(expr, ptg, summary);
+		handleExpr(u, expr, ptg, summary);
 	}
 
-	public static void handleExpr(InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	private static int getSummarySize(Map<ObjectNode, EscapeStatus> summary)
+	{
+		return summary.toString().length();
+	}
+
+	public static void handleExpr(Unit u, InvokeExpr expr, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 //		if(expr.getMethod().isJavaLibraryMethod()) {
 //			return;
-//		} 
+//		}
+		/*
+		 * Please note that expr.getMethod() is wrong. use cg.edgesOutOf() to get methods(). expr.getMethod() can also 
+		 * point to functions which doesn't exist. This means that handleExpr should have a loop to 
+		 */
+
 		/*
 		 * special: only constructors and initializers
 		 * static: static method calls
@@ -64,6 +80,7 @@ public class JInvokeStmtHandler {
 			Value base = invokeExpr.getBase();
 			ConditionalValue cv = new ConditionalValue(invokeExpr.getMethod(), new ObjectNode(-1, ObjectType.parameter), true);
 			ptg.cascadeCV((Local) base, cv, summary);
+			// System.out.println("Virtual call: "+u+" isNative; "+invokeExpr.getMethod().isNative()+" base: "+base);
 		} else if (expr instanceof JInterfaceInvokeExpr) {
 			/*
 			 * Example of JVirtualInvokeExpr:
@@ -73,20 +90,77 @@ public class JInvokeStmtHandler {
 			Value base = invokeExpr.getBase();
 			ConditionalValue cv = new ConditionalValue(invokeExpr.getMethod(), new ObjectNode(-1, ObjectType.parameter), true);
 			ptg.cascadeCV((Local) base, cv, summary);
-		} else {
-			System.out.println("Unidentified invoke expr: " + expr.toString());
-			throw new IllegalArgumentException(expr.toString());
-		}
-		SootMethod method = expr.getMethod();
-		List<Value> args = expr.getArgs();
-		for (int i = 0; i < args.size(); i++) {
-			Value arg = args.get(i);
-			if (!(arg.getType() instanceof RefType)) continue;
-			if (arg instanceof Constant) continue;
-			ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
-			ConditionalValue cv = new ConditionalValue(method, obj, true);
-			ptg.cascadeCV((Local) args.get(i), cv, summary);
+		// } else if (expr instanceof JDynamicInvokeExpr) {
+		// 	throw new IllegalBCIException("JDynamicInvokeExpr");
+		}else {
+			System.err.println("Unidentified invoke expr: " + expr.toString());
+			CallGraph cg = Scene.v().getCallGraph();
+			Iterator<Edge> edges = cg.edgesOutOf(u);
+			System.err.println("CG Empty: "+edges.hasNext());
+			while (edges.hasNext()) {
+				Edge edge = edges.next();
+				System.err.println("Calling function: "+edge.tgt());
+			}
+			// throw new IllegalArgumentException(expr.toString());
 		}
 
+		CallGraph cg = Scene.v().getCallGraph();
+
+		// Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
+
+		// while(methods.hasNext())
+		// {
+		// 	SootMethod method = methods.next().method();
+		// 	List<Value> args = expr.getArgs();
+		// 	System.out.println("Method invoke: "+method +" from: "+u);
+		// 	for (int i = 0; i < args.size(); i++) {
+		// 		System.out.println(i);
+		// 		Value arg = args.get(i);
+		// 		if ((arg.getType() instanceof RefType) || (arg.getType() instanceof ArrayType) ) {
+		// 			System.out.println(i);
+		// 			if (arg instanceof Constant) continue;
+		// 			System.out.println(i);
+		// 			ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
+		// 			ConditionalValue cv = new ConditionalValue(method, obj, true);
+		// 			ptg.cascadeCV((Local) args.get(i), cv, summary);
+		// 		}
+		// 	}
+		// }
+
+		Iterator<Edge> edges = cg.edgesOutOf(u);
+		List<Value> args = expr.getArgs();
+
+		while(edges.hasNext()) {
+			Edge edge = edges.next();
+			SootMethod method = edge.tgt();
+			SootMethod srcMethod = edge.src();
+			// System.out.println("Method: "+method + "isNative: "+method.isNative());
+			boolean isNative = method.isNative();
+			int paramCount = method.getParameterCount();
+
+			for (int i = 0; i < paramCount; i++) {
+				ObjectNode obj = new ObjectNode(i, ObjectType.parameter);
+				ConditionalValue cv = new ConditionalValue(method, obj, true);
+				
+				if (edge.kind() == Kind.REFL_INVOKE)
+					ptg.cascadeCV((Local) args.get(1), cv, summary);
+				else if(edge.kind() == Kind.REFL_CONSTR_NEWINSTANCE)
+					ptg.cascadeCV((Local) args.get(0), cv, summary);
+				else {
+					Value arg = args.get(i);
+					if (arg.getType() instanceof RefType || arg.getType() instanceof ArrayType)
+						if ( !(arg instanceof Constant) )	{		// Notice the not(!) 
+							if (isNative) {
+								System.out.println("Escaping: "+args.get(i));
+								ptg.cascadeEscape((Local) args.get(i), summary);
+								nativeLocals.putIfAbsent(srcMethod,new ArrayList<>());
+								nativeLocals.get(srcMethod).add((Local)args.get(i));
+							}
+							else
+								ptg.cascadeCV((Local) args.get(i), cv, summary);
+						}
+				}
+			}
+		}
 	}
 }

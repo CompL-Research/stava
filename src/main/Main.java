@@ -5,11 +5,13 @@ import es.EscapeStatus;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
 import resolver.SummaryResolver;
+import resolver.ReworkedResolver;
 import soot.PackManager;
 import soot.Scene;
 import soot.options.Options;
 import soot.SootMethod;
 import soot.Transform;
+import soot.*;
 import utils.GetListOfNoEscapeObjects;
 import utils.Stats;
 
@@ -40,25 +42,62 @@ public class Main {
 		long analysis_start = System.currentTimeMillis();
 		Options.v().parse(sootArgs);
 		Scene.v().loadNecessaryClasses();
-		System.out.println("Application Classes: "+Scene.v().getApplicationClasses().size());
+		// SootClass s = Scene.v().getSootClass("spec.jbb.JBBmain");
+		// System.err.println(s.getMethods());
+		// System.out.println("Application Classes: "+Scene.v().getApplicationClasses());
 		PackManager.v().runPacks();
 		// soot.Main.main(sootArgs);
 		long analysis_end = System.currentTimeMillis();
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
-		System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
-		SummaryResolver sr = new SummaryResolver();
+		
+		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
-		sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
-		long res_end = System.currentTimeMillis();
-		System.out.println("Resolution is done");
-		System.out.println("Time Taken:"+(res_end-res_start)/1000F);
-		HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = kill(sr.solvedSummaries);
-		printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
-		saveStats(sr.existingSummaries, resolved, args[4]);
-
-		// printResForJVM(sr.solvedSummaries, args[2], args[4]);
+		// Resolver sr;
+		if(useNewResolver) {
+			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
+											staticAnalyser.ptgs,
+											staticAnalyser.noBCIMethods);
+			long res_end = System.currentTimeMillis();
+			System.out.println("Resolution is done");
+			System.out.println("Time Taken in phase 1:"+(analysis_end-analysis_start)/1000F);
+			System.out.println("Time Taken in phase 2:"+(res_end-res_start)/1000F);
+	
+			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
+			
+			
+			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
+			// printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			
+			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+	
+			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+	
+			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+		}
+		else {
+			SummaryResolver sr = new SummaryResolver();
+			sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
+			long res_end = System.currentTimeMillis();
+			System.out.println("Resolution is done");
+			System.out.println("Time Taken:"+(res_end-res_start)/1000F);
+	
+			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
+			
+			
+			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
+			printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			
+			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+	
+			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+	
+			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+		}
+		
+		
+		
 	}
 
 	private static void printAllInfo(Map<SootMethod, PointsToGraph> ptgs,
@@ -128,10 +167,11 @@ public class Main {
 
 	static void saveStats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> unresolved,
 						  Map<SootMethod, HashMap<ObjectNode, EscapeStatus>>resolved,
-						  String opDir) {
-		Stats beforeResolution = new Stats(unresolved);
+						  String opDir,
+						  Map<SootMethod, PointsToGraph> ptg) {
+		Stats beforeResolution = new Stats(unresolved, ptg);
 		System.out.println("calculating stats for solvedsummaries");
-		Stats afterResolution = new Stats(resolved);
+		Stats afterResolution = new Stats(resolved, null);
 		Path p_opFile = Paths.get(opDir + "/stats.txt");
 		StringBuilder sb = new StringBuilder();
 		sb.append("Before resolution:\n"+beforeResolution);

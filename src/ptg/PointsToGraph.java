@@ -4,7 +4,7 @@ import es.ConditionalValue;
 import es.EscapeStatus;
 import soot.Local;
 import soot.SootField;
-
+import soot.SootMethod;
 import java.util.*;
 
 public class PointsToGraph {
@@ -14,6 +14,11 @@ public class PointsToGraph {
 	public PointsToGraph() {
 		vars = new HashMap<>();
 		fields = new HashMap<>();
+	}
+
+	private static int getSummarySize(Map<ObjectNode, EscapeStatus> summary)
+	{
+		return summary.toString().length();
 	}
 
 	@SuppressWarnings("unchecked")
@@ -91,9 +96,15 @@ public class PointsToGraph {
 
 	public void STRONG_makeField(Local lhs, SootField f, Local rhs) {
 		Set<ObjectNode> lhsPtSet = vars.get(lhs);
-		if (lhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		if (lhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		}
 		Set<ObjectNode> rhsPtSet = vars.get(rhs);
-		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		if (rhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		}
 		for(ObjectNode parent : lhsPtSet) {
 			STRONG_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
 		}
@@ -101,9 +112,15 @@ public class PointsToGraph {
 
 	public void WEAK_makeField(Local lhs, SootField f, Local rhs) {
 		Set<ObjectNode> lhsPtSet = vars.get(lhs);
-		if (lhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		if (lhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + lhs + " doesn't exist!");
+		}
 		Set<ObjectNode> rhsPtSet = vars.get(rhs);
-		if (rhsPtSet == null) throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		if (rhsPtSet == null) {
+			return;
+			// throw new IllegalArgumentException("Pts-to set for " + rhs + " doesn't exist!");
+		}
 		for(ObjectNode parent : lhsPtSet) {
 			WEAK_makeField(parent, f, (Set<ObjectNode>) ((HashSet<ObjectNode>) rhsPtSet).clone());
 		}
@@ -187,12 +204,13 @@ public class PointsToGraph {
 
 	public void union(PointsToGraph other) {
 		for (Map.Entry<Local, Set<ObjectNode>> entry : other.vars.entrySet()) {
-			if (vars.containsKey(entry.getKey())) {
+			if (vars.containsKey(entry.getKey()) && entry.getValue() != null) {
 				if (!vars.get(entry.getKey()).equals(entry.getValue())) {
 					vars.get(entry.getKey()).addAll(entry.getValue());
 				}
 			} else {
-				vars.put(entry.getKey(), new HashSet<>(entry.getValue()));
+				if (entry.getValue() != null)
+					vars.put(entry.getKey(), new HashSet<>(entry.getValue()));
 			}
 		}
 		for (Map.Entry<ObjectNode, Map<SootField, Set<ObjectNode>>> entry : other.fields.entrySet()) {
@@ -260,18 +278,18 @@ public class PointsToGraph {
 				summary.get(o).addEscapeState(cv);
 //				System.out.println("verifying add: "+summary.get(o).toString());
 			} else summary.put(o, new EscapeStatus(cv));
-			recursiveCascadeES(o, summary, done);
+			// recursiveCascadeES(o, cv, summary, done);
 			done.add(o);
 		}
 	}
 
-	public void cascadeES(Local l, Map<ObjectNode, EscapeStatus> summary) {
-		if (!vars.containsKey(l)) return;
-		HashSet<ObjectNode> done = new HashSet<ObjectNode>();
-		vars.get(l).forEach(parent -> recursiveCascadeES(parent, summary, done));
-	}
+	// public void cascadeES(Local l, Map<ObjectNode, EscapeStatus> summary) {
+	// 	if (!vars.containsKey(l)) return;
+	// 	HashSet<ObjectNode> done = new HashSet<ObjectNode>();
+	// 	vars.get(l).forEach(parent -> recursiveCascadeES(parent, summary, done));
+	// }
 
-	public void recursiveCascadeES(ObjectNode parent, Map<ObjectNode, EscapeStatus> summary, HashSet<ObjectNode> done) {
+	public void recursiveCascadeES(ObjectNode parent, ConditionalValue cv,  Map<ObjectNode, EscapeStatus> summary, HashSet<ObjectNode> done) {
 		if (done.contains(parent)) return;
 		if (!fields.containsKey(parent)) return;
 		HashSet<ObjectNode> children = new HashSet<ObjectNode>();
@@ -281,17 +299,32 @@ public class PointsToGraph {
 			 * Conditional values are immutable. So maybe every object
 			 * doesn't require a fresh copy of the same conditional value.
 			 */
-			EscapeStatus es = summary.get(parent).makeField(entry.getKey());
-			entry.getValue().forEach(object -> summary.get(object).addEscapeStatus(es));
+
+			// <parameter,0>
+
+			//  C.f = B 
+			//  B.g = C
+
+			System.out.println("Entries 0: "+entry + " Size: "+getSummarySize(summary));
+			// EscapeStatus es = summary.get(parent).makeField(entry.getKey());
+			System.out.println("Entries 1: "+entry + " Size: "+getSummarySize(summary));
+			// entry.getValue().forEach(object -> summary.get(object).addEscapeStatus(es));
+			entry.getValue().forEach(object -> summary.get(object).addEscapeState(cv));
+			System.out.println("Entries 2: "+entry + " Size: "+getSummarySize(summary));
 			children.addAll(entry.getValue());
+			entry.getValue().forEach(child -> recursiveCascadeES(child, cv.addField(entry.getKey()), summary, done));
 		}
-		done.add(parent);
-		children.remove(parent);
-		children.forEach(child -> recursiveCascadeES(child, summary, done));
+		// System.out.println("RecursiveCascadeCV exit for "+parent+" for size: "+getSummarySize(summary));
+		// done.add(parent);
+		// children.remove(parent);
+		// children.forEach(child -> recursiveCascadeES(child, cv, summary, done));
 	}
 
 	public void propagateES(Local lhs, Local rhs, Map<ObjectNode, EscapeStatus> summary) {
 		EscapeStatus es1 = new EscapeStatus();
+		if (! vars.containsKey(lhs) ) {
+			return;
+		}
 		for (ObjectNode parent : vars.get(lhs)) {
 			es1.addEscapeStatus(summary.get(parent));
 		}
@@ -324,16 +357,17 @@ public class PointsToGraph {
 		}
 	}
 
-	public void setAsReturn(Local l, Map<ObjectNode, EscapeStatus> summary) {
+	public void setAsReturn(SootMethod m, Local l, Map<ObjectNode, EscapeStatus> summary) {
 		if (!vars.containsKey(l)) return;
 		Set<ObjectNode> s = new HashSet<>();
 		s.addAll(vars.get(l));
 		// TODO: Incorrect. Rectify this.
 		vars.put(RetLocal.getInstance(), s);
 		ObjectNode o = new ObjectNode(0, ObjectType.returnValue);
-		ConditionalValue ret = new ConditionalValue(null, o);
+		ConditionalValue ret = new ConditionalValue(m, o);
 		cascadeCV(l, ret, summary);
 	}
+
 
 	public void cascadeEscape(Local l, Map<ObjectNode, EscapeStatus> summary) {
 		if (!vars.containsKey(l)) return;
@@ -358,10 +392,12 @@ public class PointsToGraph {
 
 	public void storeStmtArrayRef(Local lhs, Local rhs) {
 		if (!vars.containsKey(lhs)) {
-			throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
+			return;
+			// throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
 		}
 		if (!vars.containsKey(rhs)) {
-			throw new IllegalArgumentException("ptset for " + rhs.toString() + " Does not exist!");
+			return;
+			// throw new IllegalArgumentException("ptset for " + rhs.toString() + " Does not exist!");
 		}
 		vars.get(lhs).forEach(parent -> {
 			if (!fields.containsKey(parent)) fields.put(parent, new HashMap<>());
@@ -378,7 +414,8 @@ public class PointsToGraph {
 
 	public void storeStmtArrayRef(Local lhs, ObjectNode obj) {
 		if (!vars.containsKey(lhs)) {
-			throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
+			return;
+			// throw new IllegalArgumentException("ptset for " + lhs.toString() + " Does not exist!");
 		}
 		vars.get(lhs).forEach(parent -> {
 			if (!fields.containsKey(parent)) fields.put(parent, new HashMap<>());

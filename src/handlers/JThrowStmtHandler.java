@@ -18,7 +18,7 @@ public class JThrowStmtHandler {
 			if (ptg.vars.containsKey(op)) {
 				ptg.vars.get(op).forEach(obj -> summary.get(obj).setEscape());
 			} else {
-				throw new IllegalArgumentException("No ptset for " + u.toString() + " found!");
+				// throw new IllegalArgumentException("No ptset for " + u.toString() + " found!");
 			}
 		} else {
 			throw new IllegalArgumentException("op is not a local: " + op.getClass() + " in " + u.toString());
