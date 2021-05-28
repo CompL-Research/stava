@@ -2,7 +2,7 @@ package handlers.JAssignStmt;
 
 import config.AssignStmtHandler;
 import config.UpdateType;
-import es.ConditionalValue;
+import es.*;
 import es.EscapeStatus;
 import handlers.JInvokeStmtHandler;
 import ptg.InvalidBCIObjectNode;
@@ -31,12 +31,12 @@ public class InvokeStmt {
 	{
 		return summary.toString().length();
 	}
-	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public static void handle(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		Local lhs = (Local) ((JAssignStmt) u).getLeftOp();
 		Value rhs = ((JAssignStmt) u).getRightOp();
 		AbstractInvokeExpr expr = (AbstractInvokeExpr) rhs;
 		//SootMethod m = expr.getMethod();	// Wrong
-		JInvokeStmtHandler.handleExpr(u, expr, ptg, summary);
+		JInvokeStmtHandler.handleExpr(m, u, expr, ptg, summary);
 
 		// System.out.println("Size after handleexpr: "+ getSummarySize(summary));
 
@@ -46,9 +46,12 @@ public class InvokeStmt {
 
 		Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
 
+		// System.out.println("Processing: "+expr);
 		while (methods.hasNext()) {
-			SootMethod m = methods.next().method();
-			es.addEscapeState(new ConditionalValue (m, new ObjectNode(0, ObjectType.returnValue), Boolean.TRUE));
+			SootMethod method = methods.next().method();
+			EscapeState cv = new ConditionalValue (method, new ObjectNode(0, ObjectType.returnValue), Boolean.TRUE);
+			// System.out.println("Method: "+m+" "+cv+" "+es);
+			es.addEscapeState(cv);
 		}
 
 		ObjectNode n;
@@ -63,6 +66,7 @@ public class InvokeStmt {
 		} else {
 			ptg.addVar(lhs, n);
 		}
+		// System.out.println("Putting at "+n+": "+es);
 		summary.put(n, es);
 //		if(!m.isJavaLibraryMethod()) {
 //			System.out.println(m.toString()+" is not a library method");

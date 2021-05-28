@@ -173,11 +173,11 @@ public class GetSootArgs {
 				"-process-dir", args[2],
 				"-output-dir", args[4],
 				"-output-format", "jimple",
-				"-i", "jdk.*",
-				"-i", "java.*",
-				"-i", "org.*",
-				"-i", "com.*",
-				"-i", "sun.*",
+				"-x", "jdk.*",
+				// "-i", "java.*",
+				// "-i", "org.*",
+				// "-i", "com.*",
+				// "-i", "sun.*",
 				// "-include", "java.util.HashMap"
 		};
 		for(String s: sootArgs) {

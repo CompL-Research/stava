@@ -1,7 +1,7 @@
 package main;
 
 import analyser.StaticAnalyser;
-import es.EscapeStatus;
+import es.*;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
 import resolver.SummaryResolver;
@@ -23,6 +23,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.*;
+import java.io.*;
+import java.lang.*;
 
 import static utils.KillCallerOnly.kill;
 
@@ -38,13 +41,20 @@ public class Main {
 			return;
 		}
 		StaticAnalyser staticAnalyser = new StaticAnalyser();
+		CHATransform prepass = new CHATransform();
+		PackManager.v().getPack("wjap").add(new Transform("wjap.pre", prepass));
 		PackManager.v().getPack("jtp").add(new Transform("jtp.sample", staticAnalyser));
 		long analysis_start = System.currentTimeMillis();
 		Options.v().parse(sootArgs);
 		Scene.v().loadNecessaryClasses();
+
 		// SootClass s = Scene.v().getSootClass("spec.jbb.JBBmain");
 		// System.err.println(s.getMethods());
 		// System.out.println("Application Classes: "+Scene.v().getApplicationClasses());
+		SootClass s = Scene.v().getSootClass("spec.jbb.JBBmain");
+		System.err.println(s.getMethods());
+		// System.out.println("Application Classes: "+Scene.v().getApplicationClasses());
+
 		PackManager.v().runPacks();
 		// soot.Main.main(sootArgs);
 		long analysis_end = System.currentTimeMillis();
@@ -54,6 +64,19 @@ public class Main {
 		
 		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
+		// printSummary(staticAnalyser.summaries);
+		// printCFG();
+
+		// sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
+		// long res_end = System.currentTimeMillis();
+		// System.out.println("Resolution is done");
+		// System.out.println("Time Taken:"+(res_end-res_start)/1000F);
+		// HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = kill(sr.solvedSummaries);
+		// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+		// saveStats(sr.existingSummaries, resolved, args[4]);
+
+		// printResForJVM(sr.solvedSummaries, args[2], args[4]);
+
 		// Resolver sr;
 		if(useNewResolver) {
 			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
@@ -68,7 +91,7 @@ public class Main {
 			
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			// printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
@@ -95,10 +118,58 @@ public class Main {
 	
 			printResForJVM(sr.solvedSummaries, args[2], args[4]);
 		}
-		
-		
-		
 	}
+
+	static void printCFG() {
+		try {
+			FileWriter f = new FileWriter("cfg1.txt");
+			f.write(Scene.v().getCallGraph().toString());
+			f.write(CHATransform.getCHA().toString());
+			f.close();
+		}
+		catch( Exception e) {
+			System.err.println(e);
+		}
+	}
+
+	static void printSummary(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries) {
+		try {
+            FileWriter f = new FileWriter("sum1.txt");
+			// f.write(existingSummaries.toString());
+			for (SootMethod sm: existingSummaries.keySet()) {
+				HashMap<ObjectNode, EscapeStatus> hm = existingSummaries.get(sm);
+				int hash = 0;
+				List<ObjectNode> lobj = new ArrayList<>(hm.keySet());
+				Collections.sort(lobj, new Comparator<ObjectNode>(){
+					public int compare(ObjectNode a, ObjectNode b)
+						{
+							return a.toString().compareTo(b.toString());
+						}
+				});
+				f.write(sm.toString()+": ");
+				for (ObjectNode obj: lobj)
+				{
+					EscapeStatus es = hm.get(obj);
+					List<EscapeState> les = new ArrayList<>(es.status);
+					Collections.sort(les,  new Comparator<EscapeState>(){
+						public int compare(EscapeState a, EscapeState b)
+							{
+								return a.toString().compareTo(b.toString());
+							}
+					});
+					f.write(les+" ");
+					// hash ^= es.status.size();
+					// if (es instanceof ConditionalValue)
+				}
+				f.write("\n");
+				
+			}
+            f.close();
+        }
+        catch(Exception e) {
+            System.err.println(e);
+        }
+    }
 
 	private static void printAllInfo(Map<SootMethod, PointsToGraph> ptgs,
 									 Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String opDir) {

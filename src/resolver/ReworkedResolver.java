@@ -18,6 +18,7 @@ import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
 // import javafx.util.Pair;
 import java.util.*;
+import java.io.*;
 /*
  *
  * Some notes:
@@ -145,10 +146,11 @@ public class ReworkedResolver{
                             continue;
                         }
                         int parameternumber = cstate.object.ref;
-                        if(parameternumber <0) {
-                            newStates.add(state);
-                            continue;
-                        }
+                        // if(parameternumber <0) {
+                        //     newStates.add(state);
+                            
+                        //     continue;
+                        // }
                         Iterator<Edge> iter = cg.edgesInto(key);
                         // System.out.println("isempty:"+iter.hasNext()+": "+key);
                         newStates.add(state);
@@ -157,16 +159,21 @@ public class ReworkedResolver{
                             Edge edge = iter.next();
                             // System.out.println(key+" "+obj+" "+cstate+" " + +parameternumber + " "+edge.src() );
                             // System.out.println("Edge type:" + edge.kind() + " " + key+ " "+edge.srcUnit()+" "+edge.src());
-                            if (edge.kind() == Kind.REFL_CONSTR_NEWINSTANCE){
-                                parameternumber = 0;
-                            }
-                            
-                            else if (edge.kind() == Kind.REFL_INVOKE){
-                                parameternumber = 1;
+                            if (parameternumber >= 0) {
+                                if (edge.kind() == Kind.REFL_CONSTR_NEWINSTANCE){
+                                    parameternumber = 0;
+                                }
+                                
+                                else if (edge.kind() == Kind.REFL_INVOKE){
+                                    parameternumber = 1;
+                                }
                             }
                             List<ObjectNode> objects;
                             try {
-                            objects = GetObjects(edge.srcUnit(), parameternumber, edge.src());
+                                // if (parameternumber >=0 )
+                                    objects = GetObjects(edge.srcUnit(), parameternumber, edge.src());
+                                // else 
+                                //     objects = GetBaseObjects(edge.srcUnit(), parameternumber, edge.src());
                             } catch (Exception e) {
                                 System.err.println("Cond: "+cstate+ " "+cstate.object+" "+cstate.object.ref+" "+parameternumber);
                                 throw e;
@@ -220,7 +227,12 @@ public class ReworkedResolver{
         }
         Value arg;
         try {
-            arg = expr.getArg(num);
+            if (num >=0 )
+                arg = expr.getArg(num);
+            else if (num == -1 && (expr instanceof AbstractInstanceInvokeExpr))
+                arg = ((AbstractInstanceInvokeExpr)expr).getBase();
+            else return null;
+
         }
         catch (Exception e) {
             System.err.println(u + " "+num+" "+expr);
@@ -365,12 +377,14 @@ public class ReworkedResolver{
                     for (ObjectNode o2s: fieldMap2.get(f)) {
                         StandardObject sobj1 = getSObj(obj1.getMethod(), o1s);
                         StandardObject sobj2 = getSObj(obj2.getMethod(), o2s);
-                        System.err.println(sobj1+"-><-"+sobj2);
-                        if(this.graph.get(sobj1).contains(sobj2))
+                        // System.err.println(sobj1+"-><-"+sobj2);
+                        if(this.graph.get(sobj1).contains(sobj2) && this.graph.get(sobj2).contains(sobj1))
                             continue;
                         else {
-                            this.graph.get(sobj1).add(sobj2);
-                            this.graph.get(sobj2).add(sobj1);
+                            if (! this.graph.get(sobj1).contains(sobj2))
+                                this.graph.get(sobj1).add(sobj2);
+                            if (! this.graph.get(sobj2).contains(sobj1))
+                                this.graph.get(sobj2).add(sobj1);
                             matchObjs(sobj1, sobj2);
                         }
                     }
@@ -506,13 +520,14 @@ public class ReworkedResolver{
     boolean isEscapingObject( StandardObject sobj) {
 
         HashMap<ObjectNode, EscapeStatus> ess = this.solvedSummaries.get(sobj.getMethod());
-        
+        // System.err.println("isEscaping Object: "+ess+" Object: "+sobj);
         if (ess == null)
             return false;
 
         EscapeStatus es = ess.get(sobj.getObject());
+        // System.err.println("isEscaping Object: "+es+" Object: "+sobj);
         if (es != null && es.doesEscape()) {
-            System.err.println("es is escaping.");
+            // System.err.println("es is escaping.");
             // SetComponent(component, Escape.getInstance());
             return true;
         }
@@ -576,20 +591,22 @@ public class ReworkedResolver{
             // }
             if (isReturnObject(sobj)) 
             {
-                System.err.println("Identified as return obj: "+sobj);
+                // System.err.println("Identified as return obj: "+sobj);
                 SetComponent(component, Escape.getInstance());
                 return;
             }
             if (isEscapingObject(sobj)) {
-                System.err.println("Identified as escaping obj: "+sobj);
+                // System.err.println("Identified as escaping obj: "+sobj);
                 SetComponent(component, Escape.getInstance());
                 return;
             }
             // if (isAssignedToThis(sobj)) {
             //     SetComponent(component, Escape.getInstance());
             // }
+            // System.err.println("SBOJ: "+sobj+" Dependencies: "+this.graph.get(sobj));
 
             for (StandardObject nxt: this.graph.get(sobj)) {
+                // System.err.println("NEXT: "+nxt);
                 // if (nxt.getMethod().isJavaLibraryMethod()){
                 //     System.err.println("Escaping obj: "+nxt);
                 //     SetComponent(component, Escape.getInstance());
@@ -598,7 +615,7 @@ public class ReworkedResolver{
                 // }
                 try {
                     if (isEscapingObject(nxt)) {
-                        System.err.println("Escaping obj: "+nxt);
+                        // System.err.println("Escaping obj: "+nxt);
                         SetComponent(component, Escape.getInstance());
                         return;
                     }

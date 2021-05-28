@@ -34,10 +34,10 @@ public class StoreStmt {
 		Value lhs = stmt.getLeftOp();
 		Value rhs = stmt.getRightOp();
 
-		// if (rhs instanceof Local) {
-		// 	ptg.cascadeEscape((Local)rhs, summary);
-		// 	return;
-		// }
+		if (rhs instanceof Local) {
+			ptg.cascadeEscape((Local)rhs, summary);
+			return;
+		}
 
 		if (lhs instanceof JInstanceFieldRef) {
 			lhsIsJInstanceFieldRef(rhs, u, ptg, summary);

@@ -47,8 +47,16 @@ public class StaticAnalyser extends BodyTransformer {
 							// "<org.apache.jasper.servlet.JspCServletContext: getResource(Ljava/lang/String;)Ljava/net/URL;>"
 							// "<org.apache.jasper.compiler.ImplicitTagLibraryInfo: <init>(Lorg/apache/jasper/JspCompilationContext;Lorg/apache/jasper/compiler/ParserController;Lorg/apache/jasper/compiler/PageInfo;Ljava/lang/String;Ljava/lang/String;Lorg/apache/jasper/compiler/ErrorDispatcher;)V>"
 							// "<org.apache.crimson.util.MessageCatalog: getMessage(Ljava/util/Locale;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;>",
-							"<org.eclipse.osgi.internal.loader.BundleLoader: createBCL(Lorg/eclipse/osgi/framework/adaptor/BundleProtectionDomain;[Ljava/lang/String;)Lorg/eclipse/osgi/framework/adaptor/BundleClassLoader;>"
-							};
+							// "<org.eclipse.osgi.internal.loader.BundleLoader: createBCL(Lorg/eclipse/osgi/framework/adaptor/BundleProtectionDomain;[Ljava/lang/String;)Lorg/eclipse/osgi/framework/adaptor/BundleClassLoader;>"
+							// "<org.dacapo.harness.H2: prepare()V>",
+							// "<jdk.internal.org.objectweb.asm.ClassWriter: newUTF8(Ljava/lang/String;)I>"
+							// "<sun.invoke.util.BytecodeDescriptor: unparse(Ljava/lang/Class;)Ljava/lang/String;>",
+							// "<java.util.ArrayList$Itr: <init>(Ljava/util/ArrayList;)V>",
+							// "<sun.misc.IOUtils: readNBytes(Ljava/io/InputStream;I)[B>",
+							// "<java.util.ArrayList: iterator()Ljava/util/Iterator;>",
+							// "<sun.util.locale.UnicodeLocaleExtension: <init>(Ljava/util/SortedSet;Ljava/util/SortedMap;)V>",
+							"<java.lang.reflect.Parameter: toString()Ljava/lang/String;>"
+						};
 	
 	List<String> sArrays = Arrays.asList(ignoreFuncs);
 
@@ -87,7 +95,7 @@ public class StaticAnalyser extends BodyTransformer {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
 //		}
-		// System.out.println(body);
+		System.out.println(body);
 		// String dataString = body.toString();
 		// Matcher m = Pattern.compile("\n").matcher(dataString);
 		// int lines = 1;
@@ -95,7 +103,7 @@ public class StaticAnalyser extends BodyTransformer {
 		// 	lines++;
 		
 		// System.out.println(body.getMethod()+" "+lines);
-		System.out.println(body);
+		// System.out.println(body);
 		// verboseFlag = true;
 		// if (true)
 		// 	return;
@@ -161,6 +169,7 @@ public class StaticAnalyser extends BodyTransformer {
 			 * 		add successors to workListNext
 			 * 		out[u] = outNew
 			 */
+			// ObjectNode scrutinyObject = new ObjectNode(17, ObjectType.internal);
 			Iterator<Unit> iterator = workList.iterator();
 			while (iterator.hasNext()) {
 				Unit u = iterator.next();
@@ -316,11 +325,11 @@ public class StaticAnalyser extends BodyTransformer {
 	public void apply(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// System.err.println(u+" "+u.getClass().getName());
 		if (u instanceof JAssignStmt) {
-			JAssignStmtHandler.handle(u, ptg, summary);
+			JAssignStmtHandler.handle(m, u, ptg, summary);
 		} else if (u instanceof JIdentityStmt) {
 			JIdentityStmtHandler.handle(m, u, ptg, summary);
 		} else if (u instanceof JInvokeStmt) {
-			JInvokeStmtHandler.handle(u, ptg, summary);
+			JInvokeStmtHandler.handle(m, u, ptg, summary);
 		} else if (u instanceof JReturnVoidStmt) {
 			// Nothing to do here!
 		} else if (u instanceof JReturnStmt) {

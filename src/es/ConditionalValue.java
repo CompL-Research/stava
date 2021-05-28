@@ -27,7 +27,7 @@ public class ConditionalValue extends EscapeState {
 		this.isReal = isReal;
 		int mhash;
 		if (method == null) mhash = 0;
-		else mhash = method.equivHashCode();
+		else mhash = method.equivHashCode()^method.getDeclaringClass().hashCode();
 		int ohash = object.hashCode();
 		int lhash = (fieldList == null) ? 0 : fieldList.hashCode();
 		int hashcode = (mhash + ohash) * ohash + mhash;
@@ -60,6 +60,7 @@ public class ConditionalValue extends EscapeState {
 		return this.hashcode;
 	}
 
+	/////
 	@Override
 	public boolean equals(Object other) {
 		if (this == other) return true;

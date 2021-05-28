@@ -4,7 +4,7 @@
 # Set the paths according to your installation. All paths must be full paths.
 # Instructions: ./run.sh ClassName
 # Installed path of Java 8 JDK
-java_install_path="/usr/lib/jvm/java-8-oracle/"
+java_install_path="/opt/soft/share/jdk1.8.0_144/"
 
 # The soot jar to be used.
 soot_path=`realpath ../soot/sootclasses-trunk-jar-with-dependencies.jar`
@@ -13,10 +13,10 @@ soot_path=`realpath ../soot/sootclasses-trunk-jar-with-dependencies.jar`
 stava_path=`realpath ..`
 
 # The directory to be analysed.
-test_path=`realpath /home/dj/mtp/stava/tests/test4/`
+test_path=`realpath ../tests/test1/`
 
 # The directory inside which stava will output the results.
-output_path=`realpath ../out/testcase/`
+output_path=`realpath ../out/jdk/`
 
 java_compiler="${java_install_path}/bin/javac"
 java_vm="${java_install_path}/bin/java"
@@ -35,4 +35,4 @@ echo compiling stava...
 $java_compiler -cp $soot_path:${stava_path}/src ${stava_path}/src/main/Main.java
 echo compiled!
 echo launching stava...
-$java_vm -classpath $soot_path:${stava_path}/src main.Main $java_install_path false "" JDK $output_path
+$java_vm -Xmx80g -classpath $soot_path:${stava_path}/src main.Main $java_install_path false $test_path JDK $output_path

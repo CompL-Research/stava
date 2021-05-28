@@ -18,7 +18,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class JAssignStmtHandler {
-	public static void handle(Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public static void handle(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		{
 			/*
 			 * JAssignStmt Example:
@@ -29,12 +29,12 @@ public class JAssignStmtHandler {
 			Value rhs = stmt.getRightOp();
 			if (lhs.getType() instanceof PrimType) {
 				if (rhs instanceof InvokeExpr) {
-					JInvokeStmtHandler.handleExpr(u,(InvokeExpr) rhs, ptg, summary);
+					JInvokeStmtHandler.handleExpr(m, u,(InvokeExpr) rhs, ptg, summary);
 				}
 				return;
 			} else if (lhs instanceof Local) {
 				// System.err.println(lhs+" is Local");
-				lhsIsLocal(rhs, u, ptg, summary);
+				lhsIsLocal(m, rhs, u, ptg, summary);
 			} else if (lhs instanceof Ref) {
 				// System.err.println(lhs+" is Ref");
 				StoreStmt.handle(u, ptg, summary);
@@ -44,7 +44,7 @@ public class JAssignStmtHandler {
 		}
 	}
 
-	private static void lhsIsLocal(Value rhs, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	private static void lhsIsLocal(SootMethod m, Value rhs, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// System.err.println(u+" "+rhs.getType());
 		if (rhs instanceof AnyNewExpr) {
 			NewStmt.handle(u, ptg, summary);
@@ -55,7 +55,7 @@ public class JAssignStmtHandler {
 		} else if (rhs instanceof FieldRef || rhs instanceof JArrayRef) {
 			LoadStmt.handle(u, ptg, summary);
 		} else if (rhs instanceof InvokeExpr) {
-			InvokeStmt.handle(u, ptg, summary);
+			InvokeStmt.handle(m, u, ptg, summary);
 		} else if (rhs instanceof StringConstant || rhs instanceof ClassConstant) {
 			storeConstantToLocal(u, ptg, summary);
 		} else AnalysisError.unidentifiedAssignStmtCase(u);
