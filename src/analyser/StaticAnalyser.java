@@ -55,7 +55,8 @@ public class StaticAnalyser extends BodyTransformer {
 							// "<sun.misc.IOUtils: readNBytes(Ljava/io/InputStream;I)[B>",
 							// "<java.util.ArrayList: iterator()Ljava/util/Iterator;>",
 							// "<sun.util.locale.UnicodeLocaleExtension: <init>(Ljava/util/SortedSet;Ljava/util/SortedMap;)V>",
-							"<java.lang.reflect.Parameter: toString()Ljava/lang/String;>"
+							// "<java.lang.reflect.Parameter: toString()Ljava/lang/String;>",
+							"<jdk.internal.org.objectweb.asm.ClassWriter: newUTF8(Ljava/lang/String;)I>"
 						};
 	
 	List<String> sArrays = Arrays.asList(ignoreFuncs);

@@ -146,11 +146,10 @@ public class ReworkedResolver{
                             continue;
                         }
                         int parameternumber = cstate.object.ref;
-                        // if(parameternumber <0) {
-                        //     newStates.add(state);
-                            
-                        //     continue;
-                        // }
+                        if(parameternumber <0) {
+                            newStates.add(state);
+                            continue;
+                        }
                         Iterator<Edge> iter = cg.edgesInto(key);
                         // System.out.println("isempty:"+iter.hasNext()+": "+key);
                         newStates.add(state);

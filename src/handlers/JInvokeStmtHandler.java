@@ -45,6 +45,7 @@ public class JInvokeStmtHandler {
 		 * point to functions which doesn't exist. This means that handleExpr should have a loop to 
 		 */
 
+		// System.out.println("Process expr: "+expr);
 		CallGraph cg = Scene.v().getCallGraph();
 
 
@@ -131,6 +132,10 @@ public class JInvokeStmtHandler {
 // 			}
 // 			// throw new IllegalArgumentException(expr.toString());
 // 		}
+		if (expr instanceof JSpecialInvokeExpr) {
+			edges = new ArrayList<>();
+			edges.add(new Edge(m, u, expr.getMethod(), Kind.SPECIAL));	
+		}
 		if (expr instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr invokeExpr = (InstanceInvokeExpr) expr;
 			Value base = invokeExpr.getBase();
@@ -141,7 +146,6 @@ public class JInvokeStmtHandler {
 			}
 		}
 		else if (expr instanceof JStaticInvokeExpr) {
-
 		}
 		else {
 			System.err.println("Unidentified invoke expr: " + expr.toString());
