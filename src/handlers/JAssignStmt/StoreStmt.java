@@ -2,6 +2,7 @@ package handlers.JAssignStmt;
 
 import config.AssignStmtHandler;
 import config.UpdateType;
+import config.StoreEscape;
 import es.Escape;
 import es.EscapeStatus;
 import ptg.*;
@@ -33,10 +34,12 @@ public class StoreStmt {
 		JAssignStmt stmt = (JAssignStmt) u;
 		Value lhs = stmt.getLeftOp();
 		Value rhs = stmt.getRightOp();
-
-		if (rhs instanceof Local) {
-			ptg.cascadeEscape((Local)rhs, summary);
-			return;
+		
+		if (StoreEscape.MarkStoreEscaping) {
+			if (rhs instanceof Local) {
+				ptg.cascadeEscape((Local)rhs, summary);
+				return;
+			}
 		}
 
 		if (lhs instanceof JInstanceFieldRef) {

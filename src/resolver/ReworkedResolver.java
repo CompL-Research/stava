@@ -1,10 +1,12 @@
 package resolver;
 
+import config.StoreEscape;
 import es.*;
 import ptg.ObjectNode;
 import ptg.ObjectType;
 import ptg.PointsToGraph;
 import ptg.RetLocal;
+import handlers.*;
 import soot.MethodOrMethodContext;
 import soot.SootField;
 import soot.SootMethod;
@@ -146,6 +148,20 @@ public class ReworkedResolver{
                             continue;
                         }
                         int parameternumber = cstate.object.ref;
+
+                        /*
+                         *  ALERT: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+                         *  This is probably incorrect, but this works when Stores are marked as escaping.
+                         *  If stores are marked as escaping, it doesn't matter, if objects are stored in
+                         *  fields of parameters, they will anyway be marked as escaping. It is quite pos-
+                         *  -sible that I am missing something.
+                         */
+
+
+                        if (StoreEscape.MarkStoreEscaping && StoreEscape.ReduceParamDependence) {
+                            newStates.add(state);
+                            continue;
+                        }
                         if(parameternumber <0) {
                             newStates.add(state);
                             continue;
@@ -314,6 +330,21 @@ public class ReworkedResolver{
                 }
                 this.graph.put(objMap.get(key).get(obj), target);
             }
+        }
+
+        if (StoreEscape.MarkParamReturnEscaping == false)
+        for (StandardObject srcobj: this.graph.keySet()) {
+            if (srcobj.getObject().type == ObjectType.external)
+                for (StandardObject tgtobj: this.graph.get(srcobj)) {
+                    if (isReturnedFromDifferentFunction(srcobj, tgtobj)) {
+                        HashSet<ObjectNode> retObjs = JReturnStmtHandler.returnedObjects.get(tgtobj.getMethod());
+                        if (retObjs == null) continue;
+                        for (ObjectNode retobj: retObjs) {
+                            this.graph.get(objMap.get(tgtobj.getMethod()).get(retobj)).add(srcobj);
+                        } 
+                        // this.graph.get(tgtobj).add(srcobj);
+                    }
+                }
         }
 
         for (SootMethod method: this.ptgs.keySet()) {
@@ -523,6 +554,10 @@ public class ReworkedResolver{
         if (ess == null)
             return false;
 
+        if (this.noBCIMethods.contains(sobj.getMethod())) {
+            return true;
+        }
+
         EscapeStatus es = ess.get(sobj.getObject());
         // System.err.println("isEscaping Object: "+es+" Object: "+sobj);
         if (es != null && es.doesEscape()) {
@@ -530,10 +565,18 @@ public class ReworkedResolver{
             // SetComponent(component, Escape.getInstance());
             return true;
         }
-        if (this.noBCIMethods.contains(sobj.getMethod())) {
-            return true;
-        }
         return isAssignedToThis(sobj);
+    }
+
+    boolean isReturnedFromDifferentFunction(StandardObject sobj, StandardObject nxt) {
+        if (this.noBCIMethods.contains(nxt.getMethod())) {
+            return false;
+        }
+        if (sobj.getMethod() != nxt.getMethod()) {
+            if (isReturnObject(nxt))
+                return true;
+        }
+        return false;
     }
 
     boolean isAssignedToThis(StandardObject sobj) { // Is assigned to this or parameter.
@@ -577,6 +620,17 @@ public class ReworkedResolver{
         }
         return false;
     }
+
+    boolean isEscapingParam(StandardObject sobj) {
+        for (StandardObject nxt: this.graph.get(sobj)) {
+            if (isReturnObject(nxt))
+                continue;
+            if (isEscapingObject(nxt) )
+                return true;
+        }
+        return false;
+    }
+
     void resolve(List<StandardObject> component) {
         List<EscapeState> conds = new ArrayList<>();
         for (StandardObject sobj : component) {
@@ -588,14 +642,18 @@ public class ReworkedResolver{
             // catch (Exception e) {
             //     System.err.println("Error");
             // }
-            if (isReturnObject(sobj)) 
+            if (isReturnObject(sobj))
             {
-                // System.err.println("Identified as return obj: "+sobj);
+                // for (StandardObject obj: component) {
+                //     if (ofSameMethod(obj, sobj))
+                //         markObjectAsEscaping(obj);
+                // }
+                System.err.println("Identified as return obj: "+sobj);
                 SetComponent(component, Escape.getInstance());
                 return;
             }
             if (isEscapingObject(sobj)) {
-                // System.err.println("Identified as escaping obj: "+sobj);
+                System.err.println("Identified as escaping obj: "+sobj);
                 SetComponent(component, Escape.getInstance());
                 return;
             }
@@ -603,6 +661,15 @@ public class ReworkedResolver{
             //     SetComponent(component, Escape.getInstance());
             // }
             // System.err.println("SBOJ: "+sobj+" Dependencies: "+this.graph.get(sobj));
+            if (StoreEscape.MarkParamReturnEscaping == false)
+                if (sobj.getObject().type == ObjectType.parameter) {
+                    if (isEscapingParam(sobj)) {
+                        System.err.println("Identified as escaping param: "+sobj);
+                        SetComponent(component, Escape.getInstance());
+                        return;
+                    }
+                    continue;
+                }
 
             for (StandardObject nxt: this.graph.get(sobj)) {
                 // System.err.println("NEXT: "+nxt);
@@ -613,8 +680,13 @@ public class ReworkedResolver{
                 //     // continue;
                 // }
                 try {
+                    if (StoreEscape.MarkParamReturnEscaping == false)
+                        if (isReturnedFromDifferentFunction(sobj, nxt) ) {
+                            System.err.println("Returned from different func: "+ sobj);
+                            continue;
+                        }
                     if (isEscapingObject(nxt)) {
-                        // System.err.println("Escaping obj: "+nxt);
+                        System.err.println("Escaping obj: "+nxt);
                         SetComponent(component, Escape.getInstance());
                         return;
                     }

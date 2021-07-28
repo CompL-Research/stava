@@ -1,6 +1,7 @@
 package main;
 
 import analyser.StaticAnalyser;
+import config.StoreEscape;
 import es.*;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
@@ -11,6 +12,7 @@ import soot.Scene;
 import soot.options.Options;
 import soot.SootMethod;
 import soot.Transform;
+import soot.util.*;
 import soot.*;
 import utils.GetListOfNoEscapeObjects;
 import utils.Stats;
@@ -31,11 +33,27 @@ import static utils.KillCallerOnly.kill;
 
 
 public class Main {
+	static void setStoreEscapeOptions(String[] args) {
 
+		if (args.length >=6 ) {
+			if (args[5].equals("true"))
+				StoreEscape.ReduceParamDependence = true;
+			else 
+				StoreEscape.ReduceParamDependence = false;
+		}
+
+		if (args.length >= 7) {
+			if (args[6].equals("true")) 
+				StoreEscape.MarkParamReturnEscaping = true;
+			else
+				StoreEscape.MarkParamReturnEscaping = false;
+		}
+	}
 	public static void main(String[] args) {
 
 		GetSootArgs g = new GetSootArgs();
 		String[] sootArgs = g.get(args);
+		setStoreEscapeOptions(args);
 		if (sootArgs == null) {
 			System.out.println("Unable to generate args for soot!");
 			return;
@@ -47,13 +65,47 @@ public class Main {
 		long analysis_start = System.currentTimeMillis();
 		Options.v().parse(sootArgs);
 		Scene.v().loadNecessaryClasses();
+		Scene.v().loadDynamicClasses();
+		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
+		// SootClass sc = Scene.v().loadClassAndSupport("java.lang.CharacterData");
+		// System.out.println(sc.getMethods());
+		// Scene.v().forceResolve(sc.getName(), SootClass.BODIES);
+		// SootMethod tobeAdded = sc.getMethodByName("toUpperCaseEx");
+		// System.out.println("Method: "+tobeAdded);
+		// // SootMethod tobeAdded = Scene.v().getMethod("<java.lang.CharacterData: toUpperCaseEx(I)I>");
+		// entryPoints.add(tobeAdded);
 
-		// SootClass s = Scene.v().getSootClass("spec.jbb.JBBmain");
-		// System.err.println(s.getMethods());
-		// System.out.println("Application Classes: "+Scene.v().getApplicationClasses());
-		SootClass s = Scene.v().getSootClass("spec.jbb.JBBmain");
-		System.err.println(s.getMethods());
-		// System.out.println("Application Classes: "+Scene.v().getApplicationClasses());
+		Chain<SootClass> appClasses = Scene.v().getClasses();
+		Iterator<SootClass> appClassItertator = appClasses.iterator();
+		SootClass objclass = Scene.v().getSootClass("java.lang.Object");
+		while(appClassItertator.hasNext()) {
+			SootClass aclass = appClassItertator.next();
+			if (aclass.getName().contains("spec.")) {
+				aclass.setApplicationClass();
+				if (aclass.hasSuperclass() == false) {
+					if (aclass == objclass) {
+						continue;
+					}
+					else aclass.setSuperclass(objclass);
+				}
+				else {
+					// System.out.println("SuperClass: "+aclass.getSuperclass());
+				}
+			}
+		// 	aclass = Scene.v().loadClassAndSupport(aclass.getName());
+		// 	aclass = Scene.v().forceResolve(aclass.getName(), SootClass.BODIES);
+		// 	// if (aclass.getName().contains("spec.validity.Digests")) {
+		// 	// 	System.out.println("Aclass spec: "+aclass.getName()+" : "+aclass.getMethodByName("crunch_jars"));
+		// 	// }
+		// 	System.out.println("Aclass: "+aclass.getName()+ " phantom: "+aclass.isPhantomClass()+" app: "+aclass.isApplicationClass()+" Concrete: "+
+		// 		aclass.isConcrete()+" : " + aclass.getMethods());
+		// 	// System.out.println(aclass.getMethods());
+			// entryPoints.addAll(aclass.getMethods());
+		}
+		// System.out.println(entryPoints);
+		// if (true) 
+		// 	return;
+		Scene.v().setEntryPoints(entryPoints);
 
 		PackManager.v().runPacks();
 		// soot.Main.main(sootArgs);
@@ -65,19 +117,12 @@ public class Main {
 		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
 		// printSummary(staticAnalyser.summaries);
+		// System.err.println(staticAnalyser.ptgs);
+		printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+		// if (true)
+		// 	return;
 		// printCFG();
 
-		// sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
-		// long res_end = System.currentTimeMillis();
-		// System.out.println("Resolution is done");
-		// System.out.println("Time Taken:"+(res_end-res_start)/1000F);
-		// HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = kill(sr.solvedSummaries);
-		// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
-		// saveStats(sr.existingSummaries, resolved, args[4]);
-
-		// printResForJVM(sr.solvedSummaries, args[2], args[4]);
-
-		// Resolver sr;
 		if(useNewResolver) {
 			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
 											staticAnalyser.ptgs,
@@ -91,7 +136,6 @@ public class Main {
 			
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
@@ -261,3 +305,14 @@ public class Main {
 	}
 
 }
+
+/*
+-Xjit:count = 0
+
+JIT: 12-12.5K
+
+without optimization: 26K
+with redued dependence: 27.5k
+with reduce dependence and param non escaping: 27.5K
+
+*/

@@ -1,12 +1,13 @@
 package es;
 
-import ptg.ObjectNode;
+import ptg.*;
 import soot.SootField;
 import soot.SootMethod;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.*;
 
 public class ConditionalValue extends EscapeState {
 	// method will be null to denote 'caller'
@@ -15,6 +16,7 @@ public class ConditionalValue extends EscapeState {
 	public final List<SootField> fieldList;
 	public final Boolean isReal;
 	public final int hashcode;
+	public static ConcurrentHashMap<SootMethod, ConditionalValue> retCV = new ConcurrentHashMap<>();
 
 	public ConditionalValue(SootMethod m, ObjectNode obj, List<SootField> fl, Boolean isReal) {
 //		if(m!=null && m.isJavaLibraryMethod()) {
@@ -26,10 +28,12 @@ public class ConditionalValue extends EscapeState {
 		fieldList = fl;
 		this.isReal = isReal;
 		int mhash;
+		int mlen=0;
+		if (method != null) mlen = method.getParameterCount();
 		if (method == null) mhash = 0;
-		else mhash = method.equivHashCode()^method.getDeclaringClass().hashCode();
+		else mhash = method.equivHashCode()^method.getDeclaringClass().hashCode()^mlen;
 		int ohash = object.hashCode();
-		int lhash = (fieldList == null) ? 0 : fieldList.hashCode();
+		int lhash = (fieldList == null) ? 0 : (fieldList.hashCode() + fieldList.size())*fieldList.size() + fieldList.hashCode();
 		int hashcode = (mhash + ohash) * ohash + mhash;
 		if (lhash != 0) hashcode = (hashcode + lhash) * lhash + hashcode;
 		this.hashcode = hashcode;
@@ -116,5 +120,13 @@ public class ConditionalValue extends EscapeState {
 
 	public EscapeState makeFalseClone() {
 		return new ConditionalValue(this.method, this.object, this.fieldList, new Boolean(false));
+	}
+
+	public static ConditionalValue getRetCV(SootMethod sm) {
+		if (retCV.get(sm) == null) {
+			ObjectNode o = new ObjectNode(0, ObjectType.returnValue);
+			retCV.put(sm, new ConditionalValue(sm,o));
+		}
+		return retCV.get(sm);
 	}
 }

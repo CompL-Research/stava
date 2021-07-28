@@ -25,6 +25,9 @@ public class GetSootArgs {
 			else if (args[3].contains("JBB") ) {
 				return jbb(args);
 			}
+			else if (args[3].contains("spec.harness.Launch") ) {
+				return jvm(args);
+			} 
 			else {
 				return normal(args);
 			}
@@ -61,6 +64,7 @@ public class GetSootArgs {
 				// "-x", "org.apache.crimson.*",
 				// "-include", "org.w3c.*",
 				// "-include", "org.apache.*",
+				"-i", "jdt.*",
 				"-i", "jdk.*",
 				"-i", "java.*",
 				"-i", "org.*",
@@ -102,6 +106,48 @@ public class GetSootArgs {
 				// "-include", "org.w3c.*",
 				// "-include", "org.apache.*",
 				// "-i", "spec.*",
+				"-i", "jdk.*",
+				"-i", "java.*",
+				"-i", "org.*",
+				"-i", "com.*",
+				"-i", "sun.*",
+				// "-i", "javax.*",
+		};
+		for(String s: sootArgs) {
+			System.out.print(s+" ");
+		}
+		System.out.println("");
+		return sootArgs;
+	}
+
+	private String[] jvm(String[] args) {
+		String dir = args[2] ;
+		// String refl_log = "reflection-log:" + dir + "/refl.log";
+		// String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + args[2] + "/dacapo-9.12-MR1-bach.jar";
+		String cp = args[0] + "/jre/lib/rt.jar:" + args[0] + "/jre/lib/jce.jar:" + dir + ":" + dir + "/SPECjvm2008.jar";
+		String[] sootArgs = {
+				"-whole-program",
+				"-app",
+				"-allow-phantom-refs",
+				"-keep-bytecode-offset",
+				"-no-bodies-for-excluded",
+				"-keep-offset",
+				"-cp", cp,
+				"-prepend-classpath",
+				"-keep-line-number",
+				"-main-class", args[3],
+				"-process-dir", dir+"/SPECjvm2008.jar",
+				"-p","cg.spark","on",
+				"-output-dir", args[4],
+				"-output-format", "jimple",
+				"-ire",
+				// "-x", "jdk.*",
+				// "-x", "org.eclipse.jdt.internal.*",
+				// "-include", "org.apache.batik.*",
+				// "-x", "org.apache.crimson.*",
+				// "-include", "org.w3c.*",
+				// "-include", "org.apache.*",
+				"-i", "spec.*",
 				"-i", "jdk.*",
 				"-i", "java.*",
 				"-i", "org.*",

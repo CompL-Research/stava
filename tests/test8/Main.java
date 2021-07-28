@@ -9,6 +9,7 @@ public class Main {
 		Node C = new Node();
 		Node D = new Node();
 		func(A,B);
+		func(C,B);
 		return A;
 	}
 

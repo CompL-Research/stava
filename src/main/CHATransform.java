@@ -1,8 +1,9 @@
 package main;
 
-import java.util.Map;
+import java.util.*;
 
-import soot.Scene;
+import soot.*;
+import soot.util.*;
 import soot.SceneTransformer;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.CallGraphBuilder;

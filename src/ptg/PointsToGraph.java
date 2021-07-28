@@ -363,8 +363,7 @@ public class PointsToGraph {
 		s.addAll(vars.get(l));
 		// TODO: Incorrect. Rectify this.
 		vars.put(RetLocal.getInstance(), s);
-		ObjectNode o = new ObjectNode(0, ObjectType.returnValue);
-		ConditionalValue ret = new ConditionalValue(m, o);
+		ConditionalValue ret = ConditionalValue.getRetCV(m);
 		cascadeCV(l, ret, summary);
 	}
 

@@ -56,8 +56,16 @@ public class StaticAnalyser extends BodyTransformer {
 							// "<java.util.ArrayList: iterator()Ljava/util/Iterator;>",
 							// "<sun.util.locale.UnicodeLocaleExtension: <init>(Ljava/util/SortedSet;Ljava/util/SortedMap;)V>",
 							// "<java.lang.reflect.Parameter: toString()Ljava/lang/String;>",
-							"<jdk.internal.org.objectweb.asm.ClassWriter: newUTF8(Ljava/lang/String;)I>"
+							// "<jdk.internal.org.objectweb.asm.ClassWriter: newUTF8(Ljava/lang/String;)I>",
+							// "<org.eclipse.jdt.internal.core.index.DiskIndex: addQueryResult(Lorg/eclipse/jdt/internal/compiler/util/HashtableOfObject;[CLorg/eclipse/jdt/internal/compiler/util/HashtableOfObject;Lorg/eclipse/jdt/internal/core/index/MemoryIndex;)Lorg/eclipse/jdt/internal/compiler/util/HashtableOfObject;>"
+							// "<sun.security.util.DisabledAlgorithmConstraints$Constraints: <init>(Ljava/lang/String;Ljava/util/List;)V>",
+							// "<java.util.HashMap: getOrDefault(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;>"
+							// "<java.lang.String: substring(II)Ljava/lang/String;>",
+							"<org.sunflow.image.Color: blend(Lorg/sunflow/image/Color;Lorg/sunflow/image/Color;Lorg/sunflow/image/Color;)Lorg/sunflow/image/Color;>",
+							"<org.sunflow.image.Color: blend(Lorg/sunflow/image/Color;Lorg/sunflow/image/Color;Lorg/sunflow/image/Color;Lorg/sunflow/image/Color;)Lorg/sunflow/image/Color;>"
 						};
+
+	// Handle where returned parameters are further marked as escaping. This value needs to be propagated.
 	
 	List<String> sArrays = Arrays.asList(ignoreFuncs);
 
@@ -96,7 +104,7 @@ public class StaticAnalyser extends BodyTransformer {
 //			verboseFlag = true;
 //			System.out.println(body.getMethod().toString());
 //		}
-		System.out.println(body);
+		// System.out.println(body);
 		// String dataString = body.toString();
 		// Matcher m = Pattern.compile("\n").matcher(dataString);
 		// int lines = 1;
@@ -143,7 +151,6 @@ public class StaticAnalyser extends BodyTransformer {
 		int i = 0;
 		while (!workListNext.isEmpty()) {
 			if(i == 1000) {
-				System.out.println("Crossed "+i+" loops");
 				return;
 			}
 //			if (verboseFlag) {

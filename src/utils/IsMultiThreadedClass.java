@@ -16,7 +16,7 @@ public class IsMultiThreadedClass {
 			}
 
 			// TODO: Check if removing this works (added because of NPE when klass = 'avrora.syntax.objdump.ObjDumpReformatter'
-			if (klass.getSuperclass() == null) {
+			if (klass.hasSuperclass() == false || klass.getSuperclass() == null) {
 				// For the above mentioned 'avrora.syntax.objdump.ObjDumpReformatter', the superclass is 'Object' (as seen in avrora's javadocs)
 				return false;
 			}

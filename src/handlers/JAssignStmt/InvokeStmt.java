@@ -1,5 +1,6 @@
 package handlers.JAssignStmt;
 
+import main.CHATransform;
 import config.AssignStmtHandler;
 import config.UpdateType;
 import es.*;
@@ -44,12 +45,27 @@ public class InvokeStmt {
 		
 		CallGraph cg = Scene.v().getCallGraph();
 
-		Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
+		// Iterator<MethodOrMethodContext> methods = new Targets(cg.edgesOutOf(u));
+
+		Iterator<Edge> iedges = cg.edgesOutOf(u);
+		List<Edge> edges = new ArrayList<>();
+		if (!iedges.hasNext()) {
+			iedges = CHATransform.getCHA().edgesOutOf(u);
+		}
+		while(iedges.hasNext()) {
+			edges.add(iedges.next());
+		}
+		if (edges.size() == 0) {
+			System.out.println("Empty edges: "+expr+", function incoming edges: "+cg.edgesInto(m).hasNext()+
+								" Method: "+m.getBytecodeSignature());
+			edges.add(new Edge(m, u, expr.getMethod(), Kind.SPECIAL));	
+		}
 
 		// System.out.println("Processing: "+expr);
-		while (methods.hasNext()) {
-			SootMethod method = methods.next().method();
-			EscapeState cv = new ConditionalValue (method, new ObjectNode(0, ObjectType.returnValue), Boolean.TRUE);
+		for (Edge edge: edges) {
+			SootMethod method = edge.tgt();
+			// EscapeState cv = new ConditionalValue (method, new ObjectNode(0, ObjectType.returnValue), Boolean.TRUE);
+			EscapeState cv = ConditionalValue.getRetCV(method);
 			// System.out.println("Method: "+m+" "+cv+" "+es);
 			es.addEscapeState(cv);
 		}
@@ -57,6 +73,14 @@ public class InvokeStmt {
 		ObjectNode n;
 		try {
 			n = new ObjectNode(getBCI.get(u), ObjectType.external);
+			// ConditionalValue objectCV = new ConditionalValue(m,n);
+			// for (EscapeState state: es.status) {
+			// 	if (state instanceof ConditionalValue ) {
+			// 		ObjectNode o = ((ConditionalValue)state).object;
+			// 		// ptg.cascadeCV(o, objectCV, summary);
+					
+			// 	}
+			// }
 		} catch (Exception e) {
 			System.out.println("Making it an invalid obj at:" + u);
 			n = InvalidBCIObjectNode.getInstance(ObjectType.external);
@@ -66,7 +90,7 @@ public class InvokeStmt {
 		} else {
 			ptg.addVar(lhs, n);
 		}
-		// System.out.println("Putting at "+n+": "+es);
+		// System.out.println("Putting at "+n+": "+es+" Unit: "+u);
 		summary.put(n, es);
 //		if(!m.isJavaLibraryMethod()) {
 //			System.out.println(m.toString()+" is not a library method");

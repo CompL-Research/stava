@@ -19,9 +19,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 public class JInvokeStmtHandler {
 	public static ConcurrentHashMap<SootMethod, List<Local> > nativeLocals = new ConcurrentHashMap<>();
+
+	public static ArrayList<String> whitelistedNatives = new ArrayList<> (
+		Arrays.asList("<java.lang.System: arraycopy(Ljava/lang/Object;ILjava/lang/Object;II)V>")
+	);
+
+	public static ArrayList<String> blacklistedNatives = new ArrayList<> (
+		Arrays.asList("<sun.misc.Unsafe: putObject(Ljava/lang/Object;JLjava/lang/Object;)V>",
+						"<sun.misc.Unsafe: putObjectVolatile(Ljava/lang/Object;JLjava/lang/Object;)V>",
+						"<sun.misc.Unsafe: compareAndSwapObject(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z>")
+	);
+	
+
 	public static void handle(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		/*
 		 * All method calls.
@@ -45,7 +58,7 @@ public class JInvokeStmtHandler {
 		 * point to functions which doesn't exist. This means that handleExpr should have a loop to 
 		 */
 
-		// System.out.println("Process expr: "+expr);
+		// System.out.println("Process expr: "+expr+" of unit: "+u);
 		CallGraph cg = Scene.v().getCallGraph();
 
 
@@ -132,10 +145,16 @@ public class JInvokeStmtHandler {
 // 			}
 // 			// throw new IllegalArgumentException(expr.toString());
 // 		}
-		if (expr instanceof JSpecialInvokeExpr) {
-			edges = new ArrayList<>();
+		// if (expr instanceof JSpecialInvokeExpr) {
+		if (edges.size() == 0) {
+			// edges = new ArrayList<>();
+			System.out.println("Empty edges: "+expr+", function incoming edges: "+cg.edgesInto(m).hasNext()+
+								" Method: "+m.getBytecodeSignature());
 			edges.add(new Edge(m, u, expr.getMethod(), Kind.SPECIAL));	
 		}
+		
+		// System.out.println("Edges: "+edges);
+
 		if (expr instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr invokeExpr = (InstanceInvokeExpr) expr;
 			Value base = invokeExpr.getBase();
@@ -158,6 +177,10 @@ public class JInvokeStmtHandler {
 			SootMethod srcMethod = edge.src();
 			// System.out.println("Method: "+method + "isNative: "+method.isNative());
 			boolean isNative = method.isNative();
+			boolean iswhiteListed = !blacklistedNatives.contains(method.getBytecodeSignature());
+			if (isNative) {
+				System.out.println("Native Method: "+method.getBytecodeSignature()+" WhiteList: "+iswhiteListed);
+			}
 			int paramCount = method.getParameterCount();
 
 			for (int i = 0; i < paramCount; i++) {
@@ -172,7 +195,7 @@ public class JInvokeStmtHandler {
 					Value arg = args.get(i);
 					if (arg.getType() instanceof RefType || arg.getType() instanceof ArrayType)
 						if ( !(arg instanceof Constant) )	{		// Notice the not(!) 
-							if (isNative) {
+							if (isNative && !iswhiteListed) {
 								System.out.println("Escaping: "+args.get(i));
 								ptg.cascadeEscape((Local) args.get(i), summary);
 								nativeLocals.putIfAbsent(srcMethod,new ArrayList<>());
