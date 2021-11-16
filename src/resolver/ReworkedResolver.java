@@ -35,11 +35,11 @@ public class ReworkedResolver{
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries;
     public Map<SootMethod, HashMap<ObjectNode, StandardObject>> objMap;
     public Map<SootMethod, HashSet<StandardObject>> recaptureSummaries;
+    public Map<SootMethod, HashSet<SootMethod>> adjCallGraph;
     HashMap<SootMethod, HashMap<ObjectNode, ResolutionStatus>> resolutionStatus;
     Map<SootMethod, PointsToGraph> ptgs;
     Map<StandardObject, Set<StandardObject> > graph;
     Map<StandardObject, Set<StandardObject> > revgraph;
-    Map<SootMethod, Set<SootMethod>> adjCallGraph;
 
     List<SootMethod> noBCIMethods;
 
