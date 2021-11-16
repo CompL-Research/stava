@@ -4,32 +4,37 @@ import ptg.PointsToGraph;
 import es.EscapeStatus;
 import ptg.ObjectNode;
 import ptg.ObjectType;
+import ptg.StandardObject;
 import soot.SootField;
 import soot.SootMethod;
 
-// import java.util.HashMap;
-// import java.util.Map;
-// import java.util.Queue;
 import java.util.*;
 
 public class Stats {
 	int internal;
 	int noEscape;
 	int cv;
+	int inline;
 	int total;
 	double percentageNE;
 	double percentageCV;
 	int[] cnt = {0,0,0};
+	HashMap<SootMethod, Integer> noEscapeMap;
 
-	public Stats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, Map<SootMethod, PointsToGraph> ptg) {
+	public Stats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, 
+				Map<SootMethod, HashSet<StandardObject>> recaptureSummaries, 
+				Map<SootMethod, HashSet<SootMethod>> adjCallGraph,
+				Map<SootMethod, PointsToGraph> ptg) {
 		internal = 0;
 		noEscape = 0;
 		cv = 0;
 		percentageNE = 0;
 		percentageCV = 0;
+		noEscapeMap = new HashMap<>();
 		for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> e : summaries.entrySet()) {
 			List<ObjectNode> cvObjects = new ArrayList<>();
 			List<ObjectNode> escapeObjects = new ArrayList<>();
+			int tempNoEscape = 0;
 			for (Map.Entry<ObjectNode, EscapeStatus> ee : e.getValue().entrySet()) {
 				if (ee.getKey().type == ObjectType.internal) {
 					internal++;
@@ -45,15 +50,30 @@ public class Stats {
 					}
 					else {
 						noEscape++;
+						tempNoEscape++;
 					}
 				}
 			}
 			if (ptg != null) {
 				int[] res = markFieldsCV(e.getKey(), e.getValue(), ptg.get(e.getKey()), cvObjects, escapeObjects);
 				noEscape = res[0];
+				tempNoEscape = noEscape;
 				cv = res[1];
 			}
+			noEscapeMap.put(e.getKey(), new Integer(tempNoEscape));
 		}
+
+		for(Map.Entry<SootMethod, HashSet<SootMethod>> entry: adjCallGraph.entrySet()){
+			for(SootMethod m: entry.getValue()){
+				if(noEscapeMap.containsKey(m)){
+					inline += noEscapeMap.get(m).intValue();
+				}
+			}
+			if(recaptureSummaries.containsKey(entry.getKey())){
+				inline += recaptureSummaries.get(entry.getKey()).size();
+			}
+		}
+
 		System.out.println("Stat Count: "+ cnt[0]+" "+cnt[1]+" "+cnt[2]);
 		total = internal;
 		percentageNE = (noEscape * 100.0 / total);
@@ -103,6 +123,7 @@ public class Stats {
 		sb.append(String.format("(%.2f%%) ", percentageNE));
 		sb.append("CV: " + cv + " ");
 		sb.append(String.format("(%.2f%%) ", percentageCV));
+		sb.append("Inline: " + inline);
 		return sb.toString();
 	}
 }

@@ -141,7 +141,7 @@ public class Main {
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
-			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+			saveStats(sr.existingSummaries, resolved, sr.recaptureSummaries, sr.adjCallGraph, args[4], staticAnalyser.ptgs);
 	
 			printResForJVM(sr.solvedSummaries, sr.recaptureSummaries, args[2], args[4]);
 		}
@@ -160,7 +160,7 @@ public class Main {
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
-			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+			// saveStats(sr.existingSummaries, resolved, sr.recaptureSummaries, sr.adjCallGraph, args[4], staticAnalyser.ptgs);
 	
 			// printResForJVM(sr.solvedSummaries, sr.recaptureSummaries, args[2], args[4]);
 		}
@@ -290,11 +290,13 @@ public class Main {
 
 	static void saveStats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> unresolved,
 						  Map<SootMethod, HashMap<ObjectNode, EscapeStatus>>resolved,
+						  Map<SootMethod, HashSet<StandardObject>> recaptureSummaries,
+						  Map<SootMethod, HashSet<SootMethod>> adjCallGraph,
 						  String opDir,
 						  Map<SootMethod, PointsToGraph> ptg) {
-		Stats beforeResolution = new Stats(unresolved, ptg);
+		Stats beforeResolution = new Stats(unresolved, recaptureSummaries, adjCallGraph, ptg);
 		System.out.println("calculating stats for solvedsummaries");
-		Stats afterResolution = new Stats(resolved, null);
+		Stats afterResolution = new Stats(resolved, recaptureSummaries, adjCallGraph, null);
 		Path p_opFile = Paths.get(opDir + "/stats.txt");
 		StringBuilder sb = new StringBuilder();
 		sb.append("Before resolution:\n"+beforeResolution);
