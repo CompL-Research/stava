@@ -5,6 +5,7 @@ import config.StoreEscape;
 import es.*;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
+import ptg.StandardObject;
 import resolver.SummaryResolver;
 import resolver.ReworkedResolver;
 import soot.PackManager;
@@ -15,6 +16,7 @@ import soot.Transform;
 import soot.util.*;
 import soot.*;
 import utils.GetListOfNoEscapeObjects;
+import utils.GetListOfRecaptureObjects;
 import utils.Stats;
 
 import java.io.IOException;
@@ -141,7 +143,7 @@ public class Main {
 	
 			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
 	
-			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+			printResForJVM(sr.solvedSummaries, sr.recaptureSummaries, args[2], args[4]);
 		}
 		else {
 			SummaryResolver sr = new SummaryResolver();
@@ -160,7 +162,7 @@ public class Main {
 	
 			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
 	
-			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+			// printResForJVM(sr.solvedSummaries, sr.recaptureSummaries, args[2], args[4]);
 		}
 	}
 
@@ -253,7 +255,9 @@ public class Main {
 		}
 		return finalString.toString();
 	}
-	static void printResForJVM(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
+	static void printResForJVM(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, 
+								Map<SootMethod, HashSet<StandardObject>> recaptureSummaries, 
+								String ipDir, String opDir) {
 		// Open File
 		Path p_ipDir = Paths.get(ipDir);
 		Path p_opDir = Paths.get(opDir);
@@ -267,6 +271,10 @@ public class Main {
 			sb.append(transformFuncSignature(method.getBytecodeSignature()));
 			sb.append(" ");
 			sb.append(GetListOfNoEscapeObjects.get(summary));
+			if(recaptureSummaries.containsKey(method)){
+				sb.append(" ");
+				sb.append(GetListOfRecaptureObjects.get(recaptureSummaries.get(method)));
+			}
 			sb.append("\n");
 		}
 		try {

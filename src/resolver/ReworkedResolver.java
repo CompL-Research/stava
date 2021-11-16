@@ -6,6 +6,7 @@ import ptg.ObjectNode;
 import ptg.ObjectType;
 import ptg.PointsToGraph;
 import ptg.RetLocal;
+import ptg.StandardObject;
 import handlers.*;
 import soot.MethodOrMethodContext;
 import soot.SootField;
@@ -29,33 +30,16 @@ import java.io.*;
  * 
  */
 
-class StandardObject {
-    private SootMethod method;
-    private ObjectNode obj;
-    
-    public StandardObject(SootMethod m, ObjectNode o){
-        this.method = m;
-        this.obj = o;
-    }
-    public SootMethod getMethod() {
-        return this.method;
-    }
-    public ObjectNode getObject() {
-        return this.obj;
-    }
-    public String toString() {
-        return "("+method+","+obj+")";
-    }
-}
-
 public class ReworkedResolver{
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries;
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries;
     public Map<SootMethod, HashMap<ObjectNode, StandardObject>> objMap;
+    public Map<SootMethod, HashSet<StandardObject>> recaptureSummaries;
     HashMap<SootMethod, HashMap<ObjectNode, ResolutionStatus>> resolutionStatus;
     Map<SootMethod, PointsToGraph> ptgs;
     Map<StandardObject, Set<StandardObject> > graph;
     Map<StandardObject, Set<StandardObject> > revgraph;
+    Map<SootMethod, Set<SootMethod>> adjCallGraph;
 
     List<SootMethod> noBCIMethods;
 
@@ -78,11 +62,12 @@ public class ReworkedResolver{
         this.objMap = new HashMap<> ();
         this.solvedSummaries = new HashMap<> ();
         this.resolutionStatus = new HashMap<> ();
-
+        this.recaptureSummaries = new HashMap<>();
         this.graph = new HashMap<>();
         this.reverseTopoOrder = new ArrayList<>();
         this.revgraph = new HashMap<>();
-
+        this.adjCallGraph = new HashMap<>();
+        CallGraph cg = Scene.v().getCallGraph();
         for (Map.Entry<SootMethod, HashMap<ObjectNode, EscapeStatus>> entry : existingSummaries.entrySet()) {
 			SootMethod method = entry.getKey();
 			HashMap<ObjectNode, EscapeStatus> map = entry.getValue();
@@ -99,6 +84,15 @@ public class ReworkedResolver{
             resolutionStatus.put(method, q);
             this.objMap.put(method, tobj);
 			this.solvedSummaries.put(method, new HashMap<>());
+
+            Iterator<Edge> iter = cg.edgesInto(method);
+            while(iter.hasNext()){
+                Edge edge = iter.next();
+                if(!this.adjCallGraph.containsKey(edge.src().method())){
+                    this.adjCallGraph.put(edge.src(),new HashSet<>());
+                }
+                this.adjCallGraph.get(edge.src().method()).add(edge.getTgt().method());
+            }
         }
         /*
          * Next, we traverse all function calls and add mapping from caller to the 
@@ -107,6 +101,7 @@ public class ReworkedResolver{
          */
         AddCallerSummaries();
         GenerateGraphFromSummary();
+        AddRecaptureSummaries();
         FindSCC();
         // findCondesedGraph();
     }
@@ -211,7 +206,7 @@ public class ReworkedResolver{
                         }
                     }
                 }
-
+                System.out.println(key.getBytecodeSignature() + " RSLVR " + obj + " | " + newStates);
                 // System.out.println(key+" "+obj+"From: "+ status.status);
                 // status.status = newStates;
                 solvedMethodInfo.put(obj, new EscapeStatus());
@@ -388,6 +383,40 @@ public class ReworkedResolver{
         printGraph(this.graph);
         // printGraph(this.revgraph);
     }
+
+    void AddRecaptureSummaries(){
+        for(Map.Entry<StandardObject, Set<StandardObject>> entry: this.revgraph.entrySet()) {
+            SootMethod methodInfo = entry.getKey().getMethod();
+            ObjectNode obj = entry.getKey().getObject();
+            System.out.println(entry.getKey() + " GRAPH " + entry.getValue());
+            if(!this.recaptureSummaries.containsKey(methodInfo))
+                this.recaptureSummaries.put(methodInfo, new HashSet<>());
+            HashSet<StandardObject> recaptureSummary = this.recaptureSummaries.get(methodInfo);
+            for(StandardObject linkedObj: entry.getValue()){
+                if(this.adjCallGraph.containsKey(methodInfo) && this.adjCallGraph.get(methodInfo).contains(linkedObj.getMethod()))
+                    recaptureSummary.add(linkedObj);
+            }
+            if(obj.type == ObjectType.returnValue){
+                for(SootMethod m: this.adjCallGraph.keySet()){
+                    if(this.adjCallGraph.get(m).contains(methodInfo)){
+                        for(StandardObject linkedObj: entry.getValue()){
+                            if(this.adjCallGraph.get(m).contains(linkedObj.getMethod())) {
+                                if(!this.recaptureSummaries.containsKey(m))
+                                    this.recaptureSummaries.put(m, new HashSet<>());
+                                this.recaptureSummaries.get(m).add(linkedObj);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        for(SootMethod m: this.recaptureSummaries.keySet()){
+            System.out.println(m + " RECAP " + this.recaptureSummaries.get(m));
+            System.out.println(m + " CG: " + this.adjCallGraph.get(m));
+        }        
+    }
+
 
     private void matchObjs(StandardObject obj1, StandardObject obj2) {
         try {
