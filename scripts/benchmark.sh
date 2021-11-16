@@ -3,7 +3,7 @@
 # Set the paths according to your installation. All paths must be full paths.
 # Arguments: 1) name of benchmark
 # Installed path of Java 8 JDK
-java_install_path="/usr/lib/jvm/java-8-oracle/"
+java_install_path="/usr/lib/jvm/default/"
 # java_install_path=""
 # java_install_path="/wd/users/t17041/benchmarks/jdk-11.0.8/"
 # Path to the directory containing all benchmarks. The subdirectories here must
