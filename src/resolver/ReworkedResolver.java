@@ -396,7 +396,7 @@ public class ReworkedResolver{
                 if(this.adjCallGraph.containsKey(methodInfo) && this.adjCallGraph.get(methodInfo).contains(linkedObj.getMethod()))
                     recaptureSummary.add(linkedObj);
             }
-            if(obj.type == ObjectType.returnValue){
+            if(isReturnObject(entry.getKey())){
                 for(SootMethod m: this.adjCallGraph.keySet()){
                     if(this.adjCallGraph.get(m).contains(methodInfo)){
                         for(StandardObject linkedObj: entry.getValue()){
@@ -404,10 +404,23 @@ public class ReworkedResolver{
                                 if(!this.recaptureSummaries.containsKey(m))
                                     this.recaptureSummaries.put(m, new HashSet<>());
                                 this.recaptureSummaries.get(m).add(linkedObj);
+                                this.recaptureSummaries.get(m).addAll(this.revgraph.get(linkedObj));
                             }
                         }
                     }
                 }
+            }
+            if(obj.type == ObjectType.external){
+                for(SootMethod m: this.adjCallGraph.keySet()){
+                    if(this.adjCallGraph.get(m).contains(methodInfo)){
+                        for(StandardObject stObj: entry.getValue()){
+                            if(this.recaptureSummaries.containsKey(m)){
+                                this.recaptureSummaries.get(m).remove(stObj);
+                            }
+                        }
+                    }
+                }
+                
             }
         }
 
@@ -417,6 +430,13 @@ public class ReworkedResolver{
         }        
     }
 
+    boolean hasExternalLink(StandardObject stObj){
+        for(StandardObject linkedObj: this.graph.get(stObj)){
+            if(linkedObj.getObject().type == ObjectType.external)
+                return true;
+        }
+        return false;
+    }
 
     private void matchObjs(StandardObject obj1, StandardObject obj2) {
         try {
