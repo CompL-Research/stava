@@ -8,6 +8,7 @@ import ptg.PointsToGraph;
 import ptg.StandardObject;
 import resolver.SummaryResolver;
 import resolver.ReworkedResolver;
+import recapturer.*;
 import soot.PackManager;
 import soot.Scene;
 import soot.options.Options;
@@ -120,10 +121,12 @@ public class Main {
 		long res_start = System.currentTimeMillis();
 		// printSummary(staticAnalyser.summaries);
 		// System.err.println(staticAnalyser.ptgs);
-		printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+		printAllInfo(staticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 		// if (true)
 		// 	return;
 		// printCFG();
+
+		InlineRecapture ir = new InlineRecapture(staticAnalyser.summaries, staticAnalyser.ptgs, staticAnalyser.analysis);
 
 		if(useNewResolver) {
 			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
@@ -136,14 +139,15 @@ public class Main {
 	
 			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
 			
+			RecaptureResolver rr = new RecaptureResolver(sr.solvedSummaries, ir.recaptureSummaries, sr.ptgs, sr.revgraph, staticAnalyser.analysis);
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
-			saveStats(sr.existingSummaries, resolved, sr.recaptureSummaries, sr.adjCallGraph, args[4], staticAnalyser.ptgs);
+			saveStats(sr.existingSummaries, resolved, rr.siteRecaptureSummaries, sr.adjCallGraph, args[4], staticAnalyser.ptgs);
 	
-			printResForJVM(sr.solvedSummaries, sr.recaptureSummaries, args[2], args[4]);
+			printResForJVM(sr.solvedSummaries, rr.siteRecaptureSummaries, args[2], args[4]);
 		}
 		else {
 			SummaryResolver sr = new SummaryResolver();
@@ -256,7 +260,7 @@ public class Main {
 		return finalString.toString();
 	}
 	static void printResForJVM(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, 
-								Map<SootMethod, HashSet<StandardObject>> recaptureSummaries, 
+								Map<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> recaptureSummaries, 
 								String ipDir, String opDir) {
 		// Open File
 		Path p_ipDir = Paths.get(ipDir);
@@ -290,7 +294,7 @@ public class Main {
 
 	static void saveStats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> unresolved,
 						  Map<SootMethod, HashMap<ObjectNode, EscapeStatus>>resolved,
-						  Map<SootMethod, HashSet<StandardObject>> recaptureSummaries,
+						  Map<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> recaptureSummaries,
 						  Map<SootMethod, HashSet<SootMethod>> adjCallGraph,
 						  String opDir,
 						  Map<SootMethod, PointsToGraph> ptg) {
