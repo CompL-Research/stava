@@ -272,8 +272,8 @@ public class StaticAnalyser extends BodyTransformer {
 		if (verboseFlag) {
 			System.out.println("Finished analysis for:" + body.getMethod().getBytecodeSignature());
 		}
-//		Analysis currentAnalysis = new Analysis(flowSets, summary);
-//		analysis.put(body, currentAnalysis);
+		Analysis currentAnalysis = new Analysis(flowSets, summary);
+		analysis.put(body, currentAnalysis);
 //		String output = body.getMethod().getSignature()+"\n"+currentAnalysis.toString();
 
 		/*

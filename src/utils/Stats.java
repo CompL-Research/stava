@@ -7,6 +7,7 @@ import ptg.ObjectType;
 import ptg.StandardObject;
 import soot.SootField;
 import soot.SootMethod;
+import recapturer.InvokeSite;
 
 import java.util.*;
 
@@ -22,7 +23,7 @@ public class Stats {
 	HashMap<SootMethod, Integer> noEscapeMap;
 
 	public Stats(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, 
-				Map<SootMethod, HashSet<StandardObject>> recaptureSummaries, 
+				Map<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> recaptureSummaries, 
 				Map<SootMethod, HashSet<SootMethod>> adjCallGraph,
 				Map<SootMethod, PointsToGraph> ptg) {
 		internal = 0;
@@ -70,7 +71,9 @@ public class Stats {
 				}
 			}
 			if(recaptureSummaries.containsKey(entry.getKey())){
-				inline += recaptureSummaries.get(entry.getKey()).size();
+				for(Map.Entry<InvokeSite, HashSet<StandardObject>> e : recaptureSummaries.get(entry.getKey()).entrySet()) {
+					inline += e.getValue().size();
+				}
 			}
 		}
 

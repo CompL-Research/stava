@@ -34,12 +34,11 @@ public class ReworkedResolver{
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> existingSummaries;
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries;
     public Map<SootMethod, HashMap<ObjectNode, StandardObject>> objMap;
-    public Map<SootMethod, HashSet<StandardObject>> recaptureSummaries;
     public Map<SootMethod, HashSet<SootMethod>> adjCallGraph;
+    public HashMap<StandardObject, Set<StandardObject> > graph;
+    public HashMap<StandardObject, Set<StandardObject> > revgraph;
     HashMap<SootMethod, HashMap<ObjectNode, ResolutionStatus>> resolutionStatus;
-    Map<SootMethod, PointsToGraph> ptgs;
-    Map<StandardObject, Set<StandardObject> > graph;
-    Map<StandardObject, Set<StandardObject> > revgraph;
+    public Map<SootMethod, PointsToGraph> ptgs;
 
     List<SootMethod> noBCIMethods;
 
@@ -62,7 +61,6 @@ public class ReworkedResolver{
         this.objMap = new HashMap<> ();
         this.solvedSummaries = new HashMap<> ();
         this.resolutionStatus = new HashMap<> ();
-        this.recaptureSummaries = new HashMap<>();
         this.graph = new HashMap<>();
         this.reverseTopoOrder = new ArrayList<>();
         this.revgraph = new HashMap<>();
@@ -89,7 +87,7 @@ public class ReworkedResolver{
             while(iter.hasNext()){
                 Edge edge = iter.next();
                 if(!this.adjCallGraph.containsKey(edge.src().method())){
-                    this.adjCallGraph.put(edge.src(),new HashSet<>());
+                    this.adjCallGraph.put(edge.src().method(),new HashSet<>());
                 }
                 this.adjCallGraph.get(edge.src().method()).add(edge.getTgt().method());
             }
@@ -101,7 +99,6 @@ public class ReworkedResolver{
          */
         AddCallerSummaries();
         GenerateGraphFromSummary();
-        AddRecaptureSummaries();
         FindSCC();
         // findCondesedGraph();
     }
@@ -382,52 +379,6 @@ public class ReworkedResolver{
         }
         printGraph(this.graph);
         // printGraph(this.revgraph);
-    }
-
-    void AddRecaptureSummaries(){
-        for(Map.Entry<StandardObject, Set<StandardObject>> entry: this.revgraph.entrySet()) {
-            SootMethod methodInfo = entry.getKey().getMethod();
-            ObjectNode obj = entry.getKey().getObject();
-            System.out.println(entry.getKey() + " GRAPH " + entry.getValue());
-            if(!this.recaptureSummaries.containsKey(methodInfo))
-                this.recaptureSummaries.put(methodInfo, new HashSet<>());
-            HashSet<StandardObject> recaptureSummary = this.recaptureSummaries.get(methodInfo);
-            for(StandardObject linkedObj: entry.getValue()){
-                if(this.adjCallGraph.containsKey(methodInfo) && this.adjCallGraph.get(methodInfo).contains(linkedObj.getMethod()))
-                    recaptureSummary.add(linkedObj);
-            }
-            if(isReturnObject(entry.getKey())){
-                for(SootMethod m: this.adjCallGraph.keySet()){
-                    if(this.adjCallGraph.get(m).contains(methodInfo)){
-                        for(StandardObject linkedObj: entry.getValue()){
-                            if(this.adjCallGraph.get(m).contains(linkedObj.getMethod())) {
-                                if(!this.recaptureSummaries.containsKey(m))
-                                    this.recaptureSummaries.put(m, new HashSet<>());
-                                this.recaptureSummaries.get(m).add(linkedObj);
-                                this.recaptureSummaries.get(m).addAll(this.revgraph.get(linkedObj));
-                            }
-                        }
-                    }
-                }
-            }
-            if(obj.type == ObjectType.external){
-                for(SootMethod m: this.adjCallGraph.keySet()){
-                    if(this.adjCallGraph.get(m).contains(methodInfo)){
-                        for(StandardObject stObj: entry.getValue()){
-                            if(this.recaptureSummaries.containsKey(m)){
-                                this.recaptureSummaries.get(m).remove(stObj);
-                            }
-                        }
-                    }
-                }
-                
-            }
-        }
-
-        for(SootMethod m: this.recaptureSummaries.keySet()){
-            System.out.println(m + " RECAP " + this.recaptureSummaries.get(m));
-            System.out.println(m + " CG: " + this.adjCallGraph.get(m));
-        }        
     }
 
     boolean hasExternalLink(StandardObject stObj){
