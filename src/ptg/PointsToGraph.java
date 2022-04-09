@@ -26,12 +26,12 @@ public class PointsToGraph {
 		vars = new HashMap<>(other.vars.size());
 		fields = new HashMap<>(other.fields.size());
 		for (Map.Entry<Local, Set<ObjectNode>> entry : other.vars.entrySet()) {
-			vars.put(entry.getKey(), (HashSet<ObjectNode>) ((HashSet<ObjectNode>) entry.getValue()).clone());
+			vars.put(entry.getKey(), new HashSet<>(entry.getValue()));
 		}
 		for (Map.Entry<ObjectNode, Map<SootField, Set<ObjectNode>>> entry : other.fields.entrySet()) {
 			HashMap<SootField, Set<ObjectNode>> temp = new HashMap<SootField, Set<ObjectNode>>(entry.getValue().size());
 			for (Map.Entry<SootField, Set<ObjectNode>> e : entry.getValue().entrySet()) {
-				temp.put(e.getKey(), (Set<ObjectNode>) ((HashSet<ObjectNode>) e.getValue()).clone());
+				temp.put(e.getKey(), new HashSet<>(e.getValue()));
 			}
 			fields.put(entry.getKey(), temp);
 		}
@@ -193,7 +193,7 @@ public class PointsToGraph {
 
 	@Override
 	public String toString() {
-		return "Vars:" + vars.toString() + "\nFields:" + fields.toString();
+		return "Vars:" + vars.toString() + "Fields:" + fields.toString();
 	}
 
 	@Override
@@ -205,9 +205,9 @@ public class PointsToGraph {
 	public void union(PointsToGraph other) {
 		for (Map.Entry<Local, Set<ObjectNode>> entry : other.vars.entrySet()) {
 			if (vars.containsKey(entry.getKey()) && entry.getValue() != null) {
-				if (!vars.get(entry.getKey()).equals(entry.getValue())) {
+				// if (!vars.get(entry.getKey()).equals(entry.getValue())) {
 					vars.get(entry.getKey()).addAll(entry.getValue());
-				}
+				// }
 			} else {
 				if (entry.getValue() != null)
 					vars.put(entry.getKey(), new HashSet<>(entry.getValue()));
@@ -361,8 +361,9 @@ public class PointsToGraph {
 		if (!vars.containsKey(l)) return;
 		Set<ObjectNode> s = new HashSet<>();
 		s.addAll(vars.get(l));
-		// TODO: Incorrect. Rectify this.
-		vars.put(RetLocal.getInstance(), s);
+		if(!vars.containsKey(RetLocal.getInstance()))
+			vars.put(RetLocal.getInstance(), new HashSet<>());
+		vars.get(RetLocal.getInstance()).addAll(s);
 		ConditionalValue ret = ConditionalValue.getRetCV(m);
 		cascadeCV(l, ret, summary);
 	}

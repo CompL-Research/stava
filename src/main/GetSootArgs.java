@@ -220,10 +220,10 @@ public class GetSootArgs {
 				"-output-dir", args[4],
 				"-output-format", "jimple",
 				"-x", "jdk.*",
-				// "-i", "java.*",
-				// "-i", "org.*",
-				// "-i", "com.*",
-				// "-i", "sun.*",
+				"-x", "java.*",
+				"-x", "org.*",
+				"-x", "com.*",
+				"-x", "sun.*",
 				// "-include", "java.util.HashMap"
 		};
 		for(String s: sootArgs) {
