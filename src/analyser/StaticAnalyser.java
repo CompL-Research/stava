@@ -200,6 +200,8 @@ public class StaticAnalyser extends BodyTransformer {
 					// }
 					inNew.union(flowSets.get(pred).getOut());
 				}
+				if(body.getMethod().getName().equals("main"))
+					System.out.println("STAIN "+u + ": " + inNew + ": " + summary);
 				if (inNew.equals(flowSet.getIn()) && !inNew.isEmpty()) {
 					workListNext.removeAll(cfg.getSuccsOf(u));
 					continue;
@@ -256,6 +258,8 @@ public class StaticAnalyser extends BodyTransformer {
 				 * 		add successors to workList
 				 * 		out[u] = outNew
 				 */
+				if(body.getMethod().getName().equals("main"))
+					System.out.println("STAOUT " + u + ": " + outNew + ": " + summary);
 				if (!outNew.equals(flowSet.getOut())) {
 //					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutNew is new:"+outNew.toString());
 					workListNext.addAll(cfg.getSuccsOf(u));
@@ -286,14 +290,20 @@ public class StaticAnalyser extends BodyTransformer {
 			e.printStackTrace();
 		}
 		*/
-		Iterator<Entry<Unit, FlowSet>> iterator = flowSets.entrySet().iterator();
-		Entry<Unit, FlowSet> elem = iterator.next();
-		while (iterator.hasNext()) elem = iterator.next();
-		PointsToGraph ptg = elem.getValue().getOut();
-		ptgs.put(body.getMethod(), ptg);
+
+		PointsToGraph finalPtg = new PointsToGraph();
+		for(Unit u : cfg.getTails()) {
+			finalPtg.union(flowSets.get(u).getOut());
+		}
+
+		// Iterator<Entry<Unit, FlowSet>> iterator = flowSets.entrySet().iterator();
+		// Entry<Unit, FlowSet> elem = iterator.next();
+		// while (iterator.hasNext()) elem = iterator.next();
+		// PointsToGraph ptg = elem.getValue().getOut();
+		ptgs.put(body.getMethod(), finalPtg);
 		if (allNonEscaping) {
 			markAsNonEscaping(summary);
-			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, ptg);
+			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, finalPtg);
 		}
 		summaries.put(body.getMethod(), summary);
 		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
