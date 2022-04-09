@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class JReturnStmtHandler {
-	public static ConcurrentHashMap<SootMethod, HashSet<ObjectNode> > returnedObjects = new ConcurrentHashMap<>(); 
+	public static final ConcurrentHashMap<SootMethod, HashSet<ObjectNode> > returnedObjects = new ConcurrentHashMap<>(); 
 	public static void handle(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// System.out.println("Processing Return STMT: "+u);
 		Value op = ((JReturnStmt) u).getOp();

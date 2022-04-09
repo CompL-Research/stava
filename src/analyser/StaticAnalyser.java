@@ -286,14 +286,15 @@ public class StaticAnalyser extends BodyTransformer {
 			e.printStackTrace();
 		}
 		*/
-		Iterator<Entry<Unit, FlowSet>> iterator = flowSets.entrySet().iterator();
-		Entry<Unit, FlowSet> elem = iterator.next();
-		while (iterator.hasNext()) elem = iterator.next();
-		PointsToGraph ptg = elem.getValue().getOut();
-		ptgs.put(body.getMethod(), ptg);
+		PointsToGraph finalPtg = new PointsToGraph();
+		for(Unit u : cfg.getTails()) {
+			finalPtg.union(flowSets.get(u).getOut());
+		}
+	
+		ptgs.put(body.getMethod(), finalPtg);
 		if (allNonEscaping) {
 			markAsNonEscaping(summary);
-			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, ptg);
+			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, finalPtg);
 		}
 		summaries.put(body.getMethod(), summary);
 		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
