@@ -200,8 +200,6 @@ public class StaticAnalyser extends BodyTransformer {
 					// }
 					inNew.union(flowSets.get(pred).getOut());
 				}
-				if(body.getMethod().getName().equals("main"))
-					System.out.println("STAIN "+u + ": " + inNew + ": " + summary);
 				if (inNew.equals(flowSet.getIn()) && !inNew.isEmpty()) {
 					workListNext.removeAll(cfg.getSuccsOf(u));
 					continue;
@@ -258,8 +256,6 @@ public class StaticAnalyser extends BodyTransformer {
 				 * 		add successors to workList
 				 * 		out[u] = outNew
 				 */
-				if(body.getMethod().getName().equals("main"))
-					System.out.println("STAOUT " + u + ": " + outNew + ": " + summary);
 				if (!outNew.equals(flowSet.getOut())) {
 //					if(i>75 && body.getMethod().toString().contains("visitMaxs"))System.out.println("OutNew is new:"+outNew.toString());
 					workListNext.addAll(cfg.getSuccsOf(u));

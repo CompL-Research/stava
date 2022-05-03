@@ -11,14 +11,10 @@ import ptg.RetLocal;
 import ptg.StandardObject;
 import handlers.*;
 import handlers.JAssignStmt.InvokeStmt;
-import soot.MethodOrMethodContext;
-import soot.SootField;
-import soot.SootMethod;
-import soot.Scene;
-import soot.Unit;
-import soot.Value;
+import handlers.JAssignStmt.JAssignStmtHandler;
 import soot.*;
 import soot.jimple.InvokeExpr;
+import soot.jimple.Ref;
 import soot.jimple.internal.*;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
@@ -28,14 +24,14 @@ import java.io.*;
 
 public class RecaptureResolver {
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> escapeSummaries;
-    public Map<SootMethod, HashMap<Integer, HashSet<StandardObject>>> existingRecaptureSummaries;
+    public Map<SootMethod, HashMap<ObjectNode, HashSet<StandardObject>>> existingRecaptureSummaries;
     public Map<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> siteRecaptureSummaries;
     public static LinkedHashMap<Body, Analysis> analysis;
     // Map<SootMethod, HashSet<SootMethod>> adjCallGraph;
     public HashMap<StandardObject, Set<StandardObject> > graph;
 
     public RecaptureResolver(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries,
-            Map<SootMethod, HashMap<Integer, HashSet<StandardObject>>> recaptureSummaries,
+            Map<SootMethod, HashMap<ObjectNode, HashSet<StandardObject>>> recaptureSummaries,
             Map<SootMethod, PointsToGraph> ptgs,
             HashMap<StandardObject, Set<StandardObject> > graph,
             LinkedHashMap<Body, Analysis> analysis) {
@@ -46,7 +42,7 @@ public class RecaptureResolver {
         this.siteRecaptureSummaries = new HashMap<>();
         this.graph = graph;
         for(Map.Entry<StandardObject, Set<StandardObject>> entry: this.graph.entrySet()) {
-            System.out.println(entry.getKey() + " " + entry.getKey().hashCode() + " GRAPH " + entry.getValue());
+            // System.out.println(entry.getKey() + " " + entry.getKey().hashCode() + " GRAPH " + entry.getValue());
         }
         // CallGraph cg = Scene.v().getCallGraph();
         // for(Map.Entry<SootMethod, HashSet<StandardObject>> entry : this.existingRecaptureSummaries.entrySet()) {
@@ -75,36 +71,92 @@ public class RecaptureResolver {
             HashMap<InvokeSite, HashSet<StandardObject>> siteRecaptureSummary = siteRecaptureSummaries.get(method);
             for(Map.Entry<Unit, FlowSet> e : flowsets.entrySet()) {
                 Unit unit = e.getKey();
-                SootMethod call;
-                System.out.println("RECRE: " + method + ": " + e.getKey() + ": " + e.getValue().getOut());
-                if(unit instanceof JInvokeStmt) {
-                    InvokeSite invokeSite = new InvokeSite(((JInvokeStmt)unit).getInvokeExpr().getMethod(), unit);
-                    if(!siteRecaptureSummary.containsKey(invokeSite)) {
-                        siteRecaptureSummary.put(invokeSite, new HashSet<>());
-                    }
-                    HashSet<StandardObject> set = siteRecaptureSummary.get(invokeSite);
-                    if(existingRecaptureSummaries.containsKey(invokeSite.getMethod())) {
-                        HashMap<Integer, HashSet<StandardObject>> existingRecaptureSummary = existingRecaptureSummaries.get(invokeSite.getMethod());
-                        PointsToGraph unitPtg = e.getValue().getOut();
-                        InvokeExpr invokeExpr= ((JInvokeStmt)unit).getInvokeExpr();
-                        for(int i=0; i<invokeExpr.getArgCount(); i++) {
-                            Value v = invokeExpr.getArg(i);
-                            if (v instanceof NullConstant) continue;
-		                    else if (!(v instanceof Local)) continue;
-                            if(unitPtg.vars.containsKey(v) && existingRecaptureSummary.containsKey(i)) {
-                                Set<ObjectNode> paramObjs = unitPtg.vars.get(v);
+                PointsToGraph unitPtg = e.getValue().getOut();
+                // System.out.println("RECRE: " + method + ": " + e.getKey() + ": " + e.getValue().getOut());
+                if(unit instanceof JAssignStmt) {
+                    Value lhs = ((JAssignStmt) unit).getLeftOp();
+                    Value rhs = ((JAssignStmt) unit).getRightOp();
+                    if(rhs instanceof InvokeExpr) {
+                        InvokeSite invokeSite = new InvokeSite(((InvokeExpr) rhs).getMethod(), unit);
+                        handleInvokeExpr(invokeSite, ((InvokeExpr) rhs), escapeSummary, siteRecaptureSummary, unitPtg);
+                        if(existingRecaptureSummaries.containsKey(invokeSite.getMethod())) {
+                            HashSet<StandardObject> set = siteRecaptureSummary.get(invokeSite);
+                            HashSet<StandardObject> retReachables = new HashSet<>(); 
+                            HashMap<ObjectNode, HashSet<StandardObject>> existingRecaptureSummary = existingRecaptureSummaries.get(invokeSite.getMethod());
+                            for(Map.Entry<ObjectNode, HashSet<StandardObject>> exRecap : existingRecaptureSummary.entrySet()) {
+                                if(exRecap.getKey().type != ObjectType.parameter) {
+                                    retReachables.addAll(exRecap.getValue());
+                                }
+                            }
+                            if(lhs instanceof Local && unitPtg.vars.containsKey(lhs)) {
+                                Set<ObjectNode> paramObjs = unitPtg.vars.get(lhs);
+                                boolean flag = true;
                                 for(ObjectNode paramObj : paramObjs) {
-                                    if(escapeSummary.get(paramObj).containsNoEscape()) {
-                                        set.addAll(existingRecaptureSummary.get(i));
+                                    if(escapeSummary.get(paramObj).doesEscape()) {
+                                        flag = false;
+                                        break;
                                     }
+                                }
+                                if(flag) {
+                                    set.addAll(retReachables);
                                 }
                             }
                         }
-                        set.addAll(existingRecaptureSummary.get(-2));
-                        // System.out.println("RECRE: " + method + "; " + set + "; " + unit + "; " + unitPtg);
+                    }
+                }
+                else if(unit instanceof JInvokeStmt) {
+                    InvokeSite invokeSite = new InvokeSite(((JInvokeStmt) unit).getInvokeExpr().getMethod(), unit);
+                    handleInvokeExpr(invokeSite, ((JInvokeStmt) unit).getInvokeExpr(), escapeSummary, siteRecaptureSummary, unitPtg);
+                }
+            }
+        }
+    }
+
+    void handleInvokeExpr(InvokeSite invokeSite,
+                        InvokeExpr expr,
+                        HashMap<ObjectNode, EscapeStatus> escapeSummary, 
+                        HashMap<InvokeSite, HashSet<StandardObject>> siteRecaptureSummary,
+                        PointsToGraph unitPtg) {
+        if(!siteRecaptureSummary.containsKey(invokeSite)) {
+            siteRecaptureSummary.put(invokeSite, new HashSet<>());
+        }
+        if(existingRecaptureSummaries.containsKey(invokeSite.getMethod())) {
+            HashSet<StandardObject> set = siteRecaptureSummary.get(invokeSite);
+            HashMap<ObjectNode, HashSet<StandardObject>> existingRecaptureSummary = existingRecaptureSummaries.get(invokeSite.getMethod());
+            for(Map.Entry<ObjectNode, HashSet<StandardObject>> recap : existingRecaptureSummary.entrySet()) {
+                ObjectNode param = recap.getKey();
+                if(param.type == ObjectType.parameter && param.ref > -1) {
+                    Value v = expr.getArg(param.ref);
+                    if (v instanceof NullConstant) continue;
+                    else if (!(v instanceof Local)) continue;
+                    Set<ObjectNode> paramObjs = unitPtg.vars.get(v);
+                    boolean flag = true;
+                    for(ObjectNode paramObj : paramObjs) {
+                        if(escapeSummary.get(paramObj).doesEscape()) {
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if(flag) {
+                        set.addAll(recap.getValue());
                     }
                 }
             }
+            // for(int i=0; i<invokeExpr.getArgCount(); i++) {
+            //     Value v = invokeExpr.getArg(i);
+            //     if (v instanceof NullConstant) continue;
+            //     else if (!(v instanceof Local)) continue;
+            //     if(unitPtg.vars.containsKey(v) && existingRecaptureSummary.containsKey(i)) {
+            //         Set<ObjectNode> paramObjs = unitPtg.vars.get(v);
+            //         for(ObjectNode paramObj : paramObjs) {
+            //             if(escapeSummary.get(paramObj).containsNoEscape()) {
+            //                 set.addAll(existingRecaptureSummary.get(i));
+            //             }
+            //         }
+            //     }
+            // }
+            // set.addAll(existingRecaptureSummary.get(-2));
+            // System.out.println("RECRE: " + method + "; " + set + "; " + unit + "; " + unitPtg);
         }
     }
 

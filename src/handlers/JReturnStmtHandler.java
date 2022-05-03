@@ -26,9 +26,6 @@ public class JReturnStmtHandler {
 		// System.out.println("Return: "+u+" Method: "+m);
 		if (returnedObjects.get(m) == null)
 			returnedObjects.put(m, new HashSet<>());
-		if(m.getName().equals("func")) {
-			System.out.println("RETSTMT" + returnedObjects.get(m) +"; " + ptg.vars.get(l));
-		}
 		if (ptg.vars.get(l) != null)
 			returnedObjects.get(m).addAll(ptg.vars.get(l));
 		ptg.setAsReturn(m, l, summary);
