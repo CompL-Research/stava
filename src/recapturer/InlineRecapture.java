@@ -26,7 +26,7 @@ import java.util.*;
 import java.io.*;
 
 public class InlineRecapture {
-    public Map<SootMethod, HashMap<Integer, HashSet<StandardObject>>> recaptureSummaries;
+    public Map<SootMethod, HashMap<ObjectNode, HashSet<StandardObject>>> recaptureSummaries;
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> escapeSummaries;
     public static LinkedHashMap<Body, Analysis> analysis;
     Map<SootMethod, PointsToGraph> ptgs;
@@ -42,6 +42,7 @@ public class InlineRecapture {
         recaptureSummaries = new HashMap<>();
         
         AddRecaptureSummaries();
+        System.out.println("RECSUM::" + recaptureSummaries);
     }
 
     void AddRecaptureSummaries() {
@@ -51,20 +52,19 @@ public class InlineRecapture {
             PointsToGraph ptg = entry.getValue();
             if(!this.recaptureSummaries.containsKey(method))
                 this.recaptureSummaries.put(method, new HashMap<>());
-            HashMap<Integer, HashSet<StandardObject>>  recaptureSummary = this.recaptureSummaries.get(method);
+            HashMap<ObjectNode, HashSet<StandardObject>>  recaptureSummary = this.recaptureSummaries.get(method);
             HashMap<ObjectNode, EscapeStatus> escapeSummary = this.escapeSummaries.get(method);
             
             // HashSet<ObjectNode> set = new HashSet<>();
-            HashMap<Integer, HashSet<ObjectNode>> hmap = new HashMap<>();
+            HashMap<ObjectNode, HashSet<ObjectNode>> hmap = new HashMap<>();
             HashSet<ObjectNode> externalReachSet = new HashSet<>();
             for(Map.Entry<Local, Set<ObjectNode>> var : ptg.vars.entrySet()) {
                 for(ObjectNode o : var.getValue()) {
                     if(o.type == ObjectType.parameter) {
-                        StandardObject paramObj = new StandardObject(method, o);
-                        if(!hmap.containsKey(paramObj.getObject().ref)) {
-                            hmap.put(paramObj.getObject().ref, new HashSet<>());
+                        if(!hmap.containsKey(o)) {
+                            hmap.put(o, new HashSet<>());
                         }
-                        hmap.get(paramObj.getObject().ref).addAll((HashSet<ObjectNode>) ptg.reachables(o));
+                        hmap.get(o).addAll((HashSet<ObjectNode>) ptg.reachables(o));
                     }
                     // if(o.type == ObjectType.returnValue) {
                     //     set.add(o);
@@ -75,11 +75,21 @@ public class InlineRecapture {
                     }
                 }
             }
+            if(JReturnStmtHandler.returnedObjects.containsKey(method)){
+                HashSet<ObjectNode> retObjs = JReturnStmtHandler.returnedObjects.get(method);
+                for(ObjectNode o : retObjs) {
+                    if(!hmap.containsKey(o)) {
+                        hmap.put(o, new HashSet<>());
+                    }
+                    hmap.get(o).addAll((HashSet<ObjectNode>) ptg.reachables(o));
+                }
+            }
+
             if(!externalReachables.containsKey(method)) {
                 externalReachables.put(method, externalReachSet);
             }
 
-            for(Map.Entry<Integer, HashSet<ObjectNode>> t : hmap.entrySet()) {
+            for(Map.Entry<ObjectNode, HashSet<ObjectNode>> t : hmap.entrySet()) {
                 HashSet<StandardObject> set = new HashSet<>();
                 for(ObjectNode o : t.getValue()) {
                     if(o.type != ObjectType.parameter && o.type != ObjectType.external && !externalReachSet.contains(o))
@@ -95,32 +105,32 @@ public class InlineRecapture {
             // System.out.println("INREC: " + method + ": " + recaptureSummary);
         }
 
-        for(Map.Entry<Body, Analysis> entry : analysis.entrySet()) {
-            SootMethod method = entry.getKey().getMethod();
-            Map<Unit, FlowSet> flowsets = entry.getValue().getFlowSets();
-            if(!this.recaptureSummaries.containsKey(method))
-                this.recaptureSummaries.put(method, new HashMap<>());
-            HashMap<Integer, HashSet<StandardObject>>  recaptureSummary = this.recaptureSummaries.get(method);
-            HashMap<ObjectNode, EscapeStatus> escapeSummary = this.escapeSummaries.get(method);
-            HashSet<ObjectNode> set = new HashSet<>();
-            for(Map.Entry<Unit, FlowSet> e : flowsets.entrySet()) {
-                Unit unit = e.getKey();
-                PointsToGraph unitPtg = e.getValue().getOut();
-                if(unit instanceof JReturnStmt) {
-                    Value v = ((JReturnStmt)unit).getOp();
-                    if (v instanceof NullConstant) continue;
-	            	else if (!(v instanceof Local)) continue;
-                    set.addAll((HashSet<ObjectNode>) unitPtg.reachables((Local)v));
-                }
-            }
-            set.removeAll(externalReachables.get(method));
-            if(!recaptureSummary.containsKey(-2)) {
-                recaptureSummary.put(-2, new HashSet<>());
-            }
-            for(ObjectNode o : set) {
-                recaptureSummary.get(-2).add(new StandardObject(method, o));
-            }
-        }
+        // for(Map.Entry<Body, Analysis> entry : analysis.entrySet()) {
+        //     SootMethod method = entry.getKey().getMethod();
+        //     Map<Unit, FlowSet> flowsets = entry.getValue().getFlowSets();
+        //     if(!this.recaptureSummaries.containsKey(method))
+        //         this.recaptureSummaries.put(method, new HashMap<>());
+        //     HashMap<Integer, HashSet<StandardObject>>  recaptureSummary = this.recaptureSummaries.get(method);
+        //     HashMap<ObjectNode, EscapeStatus> escapeSummary = this.escapeSummaries.get(method);
+        //     HashSet<ObjectNode> set = new HashSet<>();
+        //     for(Map.Entry<Unit, FlowSet> e : flowsets.entrySet()) {
+        //         Unit unit = e.getKey();
+        //         PointsToGraph unitPtg = e.getValue().getOut();
+        //         if(unit instanceof JReturnStmt) {
+        //             Value v = ((JReturnStmt)unit).getOp();
+        //             if (v instanceof NullConstant) continue;
+	    //         	else if (!(v instanceof Local)) continue;
+        //             set.addAll((HashSet<ObjectNode>) unitPtg.reachables((Local)v));
+        //         }
+        //     }
+        //     set.removeAll(externalReachables.get(method));
+        //     if(!recaptureSummary.containsKey(-2)) {
+        //         recaptureSummary.put(-2, new HashSet<>());
+        //     }
+        //     for(ObjectNode o : set) {
+        //         recaptureSummary.get(-2).add(new StandardObject(method, o));
+        //     }
+        // }
     }
 
 }

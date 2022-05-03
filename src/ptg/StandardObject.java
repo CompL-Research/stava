@@ -18,7 +18,23 @@ public class StandardObject {
     public ObjectNode getObject() {
         return this.obj;
     }
+
+    @Override
     public String toString() {
         return "("+method+","+obj+")";
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if(other instanceof StandardObject) {
+            StandardObject o = (StandardObject) other;
+            return this.method.equals(o.method) && this.obj.equals(o.obj);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return (method.hashCode() + obj.hashCode()) * method.hashCode() + obj.hashCode();
     }
 }

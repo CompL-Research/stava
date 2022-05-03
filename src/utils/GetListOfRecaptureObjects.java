@@ -25,6 +25,8 @@ public class GetListOfRecaptureObjects {
             // if(!summaryMap.containsKey(methodInfo))
             //     summaryMap.put(methodInfo, new ArrayList<>());
             // summaryMap.get(methodInfo).add(stObj.getObject().ref);
+            if(entry.getValue().isEmpty())
+                continue;
             summaryMap.put(entry.getKey(), new ArrayList<>());
             for(StandardObject o : entry.getValue()) {
                 if(o.getObject().type != ObjectType.internal)
