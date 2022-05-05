@@ -7,8 +7,10 @@ public class Main {
     }
     public static void foo(Node p1){
         Node D = new Node();    //O9
+        Node F = new Node();
         bar(D);
         p1.n = D; //DANGER
+        System.out.println(F);
     }
     public static void bar(Node p2) {
         Node E = new Node();    //O14
