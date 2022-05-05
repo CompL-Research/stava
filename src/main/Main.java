@@ -139,7 +139,7 @@ public class Main {
 	
 			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
 			
-			RecaptureResolver rr = new RecaptureResolver(sr.solvedSummaries, ir.recaptureSummaries, sr.ptgs, sr.revgraph, staticAnalyser.analysis);
+			RecaptureResolver rr = new RecaptureResolver(sr.solvedSummaries, ir.recaptureSummaries, sr.ptgs, staticAnalyser.analysis);
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
 			
