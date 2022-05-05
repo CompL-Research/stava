@@ -126,7 +126,6 @@ public class Main {
 		// 	return;
 		// printCFG();
 
-		InlineRecapture ir = new InlineRecapture(staticAnalyser.summaries, staticAnalyser.ptgs, staticAnalyser.analysis);
 
 		if(useNewResolver) {
 			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
@@ -134,13 +133,22 @@ public class Main {
 											staticAnalyser.noBCIMethods);
 			long res_end = System.currentTimeMillis();
 			System.out.println("Resolution is done");
-			System.out.println("Time Taken in phase 1:"+(analysis_end-analysis_start)/1000F);
-			System.out.println("Time Taken in phase 2:"+(res_end-res_start)/1000F);
 	
 			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
+			long rec_start = System.currentTimeMillis();
+
+			InlineRecapture ir = new InlineRecapture(staticAnalyser.summaries, staticAnalyser.ptgs, staticAnalyser.analysis);
 			
 			RecaptureResolver rr = new RecaptureResolver(sr.solvedSummaries, ir.recaptureSummaries, sr.ptgs, staticAnalyser.analysis);
 			
+			long rec_end = System.currentTimeMillis();
+
+			System.out.println("Recapture is done");
+
+			System.out.println("Time Taken in phase 1:"+(analysis_end-analysis_start)/1000F);
+			System.out.println("Time Taken in phase 2:"+(res_end-res_start)/1000F);
+			System.out.println("Time Taken in phase 3:"+(rec_end-rec_start)/1000F);
+
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
 			
 			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
