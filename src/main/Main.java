@@ -155,7 +155,7 @@ public class Main {
 	
 			saveStats(sr.existingSummaries, resolved, rr.siteRecaptureSummaries, sr.adjCallGraph, args[4], staticAnalyser.ptgs);
 	
-			printResForJVM(sr.solvedSummaries, rr.siteRecaptureSummaries, args[2], args[4]);
+			printResForJVM(sr.solvedSummaries, rr.siteSummaries, args[2], args[4]);
 		}
 		else {
 			SummaryResolver sr = new SummaryResolver();
@@ -268,7 +268,7 @@ public class Main {
 		return finalString.toString();
 	}
 	static void printResForJVM(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, 
-								Map<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> recaptureSummaries, 
+								Map<SootMethod, HashMap<Integer, HashMap<SootMethod, HashSet<Integer>>>> recaptureSummaries, 
 								String ipDir, String opDir) {
 		// Open File
 		Path p_ipDir = Paths.get(ipDir);

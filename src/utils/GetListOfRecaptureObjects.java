@@ -10,40 +10,56 @@ import java.lang.invoke.CallSite;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.TreeMap;
 
 public class GetListOfRecaptureObjects {
-	public static String get(HashMap<InvokeSite, HashSet<StandardObject>> recaptureSummary) {
+	public static String get(HashMap<Integer, HashMap<SootMethod, HashSet<Integer>>> recaptureSummary) {
         StringBuilder _ret = new StringBuilder();
-        HashMap<InvokeSite, ArrayList<Integer>> summaryMap = new HashMap<>();
+        TreeMap<Integer, HashMap<SootMethod, ArrayList<Integer>>> summaryMap = new TreeMap<>();
 
-        for(Map.Entry<InvokeSite, HashSet<StandardObject>> entry: recaptureSummary.entrySet()){
-            // if(stObj.getObject().type != ObjectType.internal)
-			// 	continue;
-            // SootMethod methodInfo = stObj.getMethod();
-            // if(!summaryMap.containsKey(methodInfo))
-            //     summaryMap.put(methodInfo, new ArrayList<>());
-            // summaryMap.get(methodInfo).add(stObj.getObject().ref);
+        for(Map.Entry<Integer, HashMap<SootMethod, HashSet<Integer>>> entry: recaptureSummary.entrySet()){
             if(entry.getValue().isEmpty())
                 continue;
-            summaryMap.put(entry.getKey(), new ArrayList<>());
-            for(StandardObject o : entry.getValue()) {
-                if(o.getObject().type != ObjectType.internal)
-				    continue;
-                summaryMap.get(entry.getKey()).add(o.getObject().ref);
+            HashMap<SootMethod, ArrayList<Integer>> summary = new HashMap<>();
+            for(Map.Entry<SootMethod, HashSet<Integer>> e : entry.getValue().entrySet()) {
+                if(e.getValue().isEmpty())
+                    continue;
+                summary.put(e.getKey(), new ArrayList<>(e.getValue()));
             }
+            summaryMap.put(entry.getKey(), summary);
         }
         _ret.append('[');
-        for(Map.Entry<InvokeSite, ArrayList<Integer>> entry: summaryMap.entrySet()){
-            Collections.sort(entry.getValue());
-            _ret.append(transformFuncSignature(entry.getKey().getMethod().getBytecodeSignature()));
-            _ret.append(" <");
-            _ret.append(entry.getKey().getSite());
-            _ret.append("> ");
-            _ret.append(entry.getValue().toString());
-            _ret.append(", ");
+
+        for(Map.Entry<Integer, HashMap<SootMethod, ArrayList<Integer>>> entry : summaryMap.entrySet()) {
+            if(entry.getValue().isEmpty())
+                continue;
+            _ret.append(entry.getKey().toString());
+            _ret.append(" [");
+            for(Map.Entry<SootMethod, ArrayList<Integer>> e : entry.getValue().entrySet()) {
+                if(e.getValue().isEmpty())
+                    continue;
+                _ret.append(transformFuncSignature(e.getKey().getBytecodeSignature()));
+                Collections.sort(e.getValue());
+                _ret.append(" ");
+                _ret.append(e.getValue().toString());
+                _ret.append(", ");
+            }
+            if(_ret.length()>1)
+                _ret.delete(_ret.length()-2, _ret.length());
+            _ret.append("], ");
         }
+
+        // for(Map.Entry<InvokeSite, ArrayList<Integer>> entry: summaryMap.entrySet()){
+        //     Collections.sort(entry.getValue());
+        //     _ret.append(transformFuncSignature(entry.getKey().getMethod().getBytecodeSignature()));
+        //     _ret.append(" <");
+        //     _ret.append(entry.getKey().getSite());
+        //     _ret.append("> ");
+        //     _ret.append(entry.getValue().toString());
+        //     _ret.append(", ");
+        // }
         if(_ret.length()>1)
             _ret.delete(_ret.length()-2, _ret.length());
         _ret.append(']');
