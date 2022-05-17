@@ -14,7 +14,7 @@ class A {
 	A f1;
 	void foo(B p) {
 		C c = new C();
-		A x = fb(p);
+		A x = this.fb(p);
 		A y = x.bar();
 		if(y instanceof B)
 			System.out.println("B");

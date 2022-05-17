@@ -26,6 +26,7 @@ public class RecaptureResolver {
     public Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> escapeSummaries;
     public Map<SootMethod, HashMap<ObjectNode, HashSet<StandardObject>>> existingRecaptureSummaries;
     public Map<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> siteRecaptureSummaries;
+    public Map<SootMethod, HashMap<Integer, HashMap<SootMethod, HashSet<Integer>>>> siteSummaries;
     public static LinkedHashMap<Body, Analysis> analysis;
 
     public RecaptureResolver(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> solvedSummaries,
@@ -37,8 +38,28 @@ public class RecaptureResolver {
         this.existingRecaptureSummaries = recaptureSummaries;
         this.analysis = analysis;
         this.siteRecaptureSummaries = new HashMap<>();
+        this.siteSummaries = new HashMap<>();
 
         SolveSummaries();
+        populateSummaries();
+    }
+
+    void populateSummaries() {
+        for(Map.Entry<SootMethod, HashMap<InvokeSite, HashSet<StandardObject>>> entry : siteRecaptureSummaries.entrySet()) {
+            if(!siteSummaries.containsKey(entry.getKey()))
+                siteSummaries.put(entry.getKey(), new HashMap<>());
+            Map<Integer, HashMap<SootMethod, HashSet<Integer>>> siteSummary = siteSummaries.get(entry.getKey());
+            for(Map.Entry<InvokeSite, HashSet<StandardObject>> e : entry.getValue().entrySet()) {
+                if(!siteSummary.containsKey(e.getKey().getSite()))
+                    siteSummary.put(e.getKey().getSite(), new HashMap<>());
+                HashMap<SootMethod, HashSet<Integer>> siteInfo = siteSummary.get(e.getKey().getSite());
+                HashSet<Integer> recapObjRefs = new HashSet<>();
+                for(StandardObject sObj : e.getValue()) {
+                    recapObjRefs.add(sObj.getObject().ref);
+                }
+                siteInfo.put(e.getKey().getMethod(), recapObjRefs);
+            }
+        }
     }
 
     void SolveSummaries() {
