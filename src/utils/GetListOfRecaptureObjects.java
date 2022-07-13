@@ -35,20 +35,28 @@ public class GetListOfRecaptureObjects {
         for(Map.Entry<Integer, HashMap<SootMethod, ArrayList<Integer>>> entry : summaryMap.entrySet()) {
             if(entry.getValue().isEmpty())
                 continue;
+            _ret.append("{");
             _ret.append(entry.getKey().toString());
-            _ret.append(" [");
             for(Map.Entry<SootMethod, ArrayList<Integer>> e : entry.getValue().entrySet()) {
+                _ret.append("<");
                 if(e.getValue().isEmpty())
                     continue;
                 _ret.append(transformFuncSignature(e.getKey().getBytecodeSignature()));
                 Collections.sort(e.getValue());
-                _ret.append(" ");
-                _ret.append(e.getValue().toString());
-                _ret.append(", ");
+                // _ret.append(" ");
+                _ret.append("[");
+                for(Integer i : e.getValue()) {
+                    _ret.append(i.toString() + ",");
+                }
+                if(_ret.length()>0)
+                    _ret.delete(_ret.length()-1, _ret.length());
+                _ret.append("]");
+                // _ret.append(e.getValue().toString());
+                _ret.append(">");
             }
-            if(_ret.length()>1)
-                _ret.delete(_ret.length()-2, _ret.length());
-            _ret.append("], ");
+            // if(_ret.length()>1)
+            //     _ret.delete(_ret.length()-2, _ret.length());
+            _ret.append("},");
         }
 
         // for(Map.Entry<InvokeSite, ArrayList<Integer>> entry: summaryMap.entrySet()){
