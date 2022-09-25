@@ -93,6 +93,10 @@ public class StaticAnalyser extends BodyTransformer {
 		// if ( !this.sArrays.contains(body.getMethod().getBytecodeSignature()))
 		// 	return;
 
+		if (body.getMethod().isJavaLibraryMethod()) {
+			return;
+		}
+
 		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 //		if(body.getMethod().getName().contains("<clinit>")){
 //			System.out.println("Skipping this method");
