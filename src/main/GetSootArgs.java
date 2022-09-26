@@ -213,6 +213,7 @@ public class GetSootArgs {
 				"-p","cg.spark","on",
 				"-p","cg","all-reachable",
 				"-keep-offset",
+				"-f","J",
 				// "-soot-classpath", cp, //"-prepend-classpath",
 				"-keep-line-number",
 				"-main-class", args[3],

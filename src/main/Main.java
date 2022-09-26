@@ -113,7 +113,9 @@ public class Main {
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
-		
+		// Now we are going to find the stack ordering of the non escaping functions
+		CreateStackOrdering();
+
 		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
 		// printSummary(staticAnalyser.summaries);
@@ -137,9 +139,9 @@ public class Main {
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
 			
-			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+			// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
-			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+			// saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
 	
 			printResForJVM(sr.solvedSummaries, args[2], args[4]);
 		}
@@ -154,13 +156,58 @@ public class Main {
 			
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			// printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 			
-			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+			// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
-			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+			// saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
 	
-			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+			// printResForJVM(sr.solvedSummaries, args[2], args[4]);
+		}
+	}
+
+	/**
+	 * Performs dfs and finds the topological order
+	 * @param node - Starting node of the dfs
+	 * @param ptg - Points to graph
+	 * @param visited - A visited array to have an idea of dfs
+	 * @param topoOrder - The final result of the dfs - Topological Order
+	 */
+	static void topologicalSortDfs(
+		ObjectNode node,
+		PointsToGraph ptg,
+		HashSet<ObjectNode> visited,
+		ArrayList<ObjectNode> topoOrder) {
+
+		}
+
+	/**
+	 * Create Stack ordering for each ptg in the Static Analyser
+	 */
+	static void CreateStackOrdering() {
+		// We assumed that the PTGs exist in the StaticAnalyser
+		
+		System.out.println("PRIYAM - Starting topological sorting");
+		for(SootMethod method : StaticAnalyser.ptgs.keySet()) {
+			System.out.println("PRIYAM: " + method);
+
+			PointsToGraph ptg = StaticAnalyser.ptgs.get(method);
+
+			// TODO - First check if it is a DAG
+			// Perform topological sort for the ptg
+			System.out.println(ptg);
+
+			HashSet<ObjectNode> visited = new HashSet<ObjectNode>();
+			ArrayList<ObjectNode> topoOrder = new ArrayList<ObjectNode>();
+
+			for(Set<ObjectNode> objectNodeSet : ptg.vars.values()) {
+				for (ObjectNode object : objectNodeSet) {
+					if (!visited.contains(object)) {
+						// System.out.println("PRIYAM object" + object);
+						topologicalSortDfs(object, ptg, visited, topoOrder);
+					}
+				}
+			}
 		}
 	}
 
