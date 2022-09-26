@@ -4,8 +4,10 @@ public class Main {
 		Node B = new Node();
 		Node C = new Node();
 		Node D = new Node();
+		Node E  = new Node();
 		A.n = B;
 		B.n = D;
+		B.n = E;
 		D.n = C;
 	}
 }

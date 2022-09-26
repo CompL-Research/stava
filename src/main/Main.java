@@ -178,7 +178,20 @@ public class Main {
 		PointsToGraph ptg,
 		HashSet<ObjectNode> visited,
 		ArrayList<ObjectNode> topoOrder) {
+			visited.add(node);
 
+			Map<SootField, Set<ObjectNode>> objectNodesMap = ptg.fields.get(node);
+			if (objectNodesMap != null) {
+				for (SootField sootField : objectNodesMap.keySet()) {
+					for (ObjectNode nextObject : objectNodesMap.get(sootField)) {
+						if (!visited.contains(nextObject)) {
+							topologicalSortDfs(nextObject, ptg, visited, topoOrder);
+						}
+					}
+				}
+			}
+
+			topoOrder.add(node);
 		}
 
 	/**
@@ -208,6 +221,8 @@ public class Main {
 					}
 				}
 			}
+
+			System.out.println("PRIYAM TopoOrder : " + topoOrder);
 		}
 	}
 
