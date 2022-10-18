@@ -75,6 +75,7 @@ public class StaticAnalyser extends BodyTransformer {
 		analysis = new LinkedHashMap<>();
 		ptgs = new ConcurrentHashMap<>();
 		summaries = new ConcurrentHashMap<>();
+		stackOrders = new ConcurrentHashMap<>();
 		noBCIMethods = new ArrayList<>();
 		allNonEscaping = false;
 	}
@@ -98,7 +99,7 @@ public class StaticAnalyser extends BodyTransformer {
 			return;
 		}
 
-		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
+		// System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 //		if(body.getMethod().getName().contains("<clinit>")){
 //			System.out.println("Skipping this method");
 //			return;
@@ -337,6 +338,10 @@ public class StaticAnalyser extends BodyTransformer {
 
 	public void apply(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// System.err.println(u+" "+u.getClass().getName());
+
+		// System.out.println("PRIYAM soot unit " + u);
+		// System.out.println("PRIYAM soot ptg " + ptg);
+
 		if (u instanceof JAssignStmt) {
 			JAssignStmtHandler.handle(m, u, ptg, summary);
 		} else if (u instanceof JIdentityStmt) {

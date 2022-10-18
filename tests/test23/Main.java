@@ -7,7 +7,7 @@ public class Main {
 		Node E  = new Node();
 		A.n = B;
 		B.n = D;
-		B.n = E;
+		B.m = E;
 		D.n = C;
 	}
 }
