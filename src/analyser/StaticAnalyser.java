@@ -302,7 +302,7 @@ public class StaticAnalyser extends BodyTransformer {
 			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, ptg);
 		}
 		summaries.put(body.getMethod(), summary);
-		System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
+		System.out.println("Static Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 	}
 
 	private void markAsEscaping(List<Local> nativeList, Map<ObjectNode, EscapeStatus> summary, PointsToGraph ptg) {

@@ -43,8 +43,11 @@ public class StackOrderAnalyser extends BodyTransformer {
     @Override
     protected void internalTransform(Body body, String phasename, Map<String, String> options) {
         SootMethod method = body.getMethod();
+        processMethod(method);
+    }
 
-        if (body.getMethod().isJavaLibraryMethod()) {
+    private void processMethod(SootMethod method) {
+        if (method.isJavaLibraryMethod()) {
             return;
         }
 
@@ -56,29 +59,30 @@ public class StackOrderAnalyser extends BodyTransformer {
 
         if (methodsProcessing.contains(method)) {
             // Recursive loop
-            // TODO - See what to do
+            // ASK - See what to do
             return;
         }
 
         methodsProcessing.add(method);
-        processMethod(body);
-        methodsProcessed.add(method);
-    }
 
-    private static void processMethod(Body body) {
-        System.out.println("PRIYAM Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
+        System.out.println("PRIYAM Method Name: "+ method.getBytecodeSignature() + ":" + method.getName());
+        Body body = method.getActiveBody();
         PatchingChain<Unit> units = body.getUnits();
 
         for (Unit u : units) {
+            // System.out.println("PRIYAM unit: " + u);
             if (u instanceof JInvokeStmt) {
                 JInvokeStmt stmt = (JInvokeStmt) u;
                 InvokeExpr expr = stmt.getInvokeExpr();
-                handleExpr(body.getMethod(), u, expr);
+                handleExpr(method, u, expr);
             }
         }
+
+        methodsProcessing.remove(method);
+        methodsProcessed.add(method);
     }
 
-    public static void handleExpr(
+    public void handleExpr(
         SootMethod m, Unit u, InvokeExpr expr) {        
         PointsToGraph ptg = StaticAnalyser.ptgs.get(m);
         CallGraph cg = Scene.v().getCallGraph();
@@ -119,6 +123,9 @@ public class StackOrderAnalyser extends BodyTransformer {
 
             // TODO - Add a recursion to first process the method
             // if not already processed
+            if (!methodsProcessed.contains(method)) {
+                processMethod(method);
+            }
 
             Map<ObjectNode, Set<ObjectNode>> paramMapping = new HashMap<ObjectNode,Set<ObjectNode>>();
             for (int i = 0; i < paramCount; i++) {
@@ -148,8 +155,9 @@ public class StackOrderAnalyser extends BodyTransformer {
              * paramsMapping also
              */
             PointsToGraph calliePTG = StaticAnalyser.ptgs.get(method);
-            // System.out.println("PRIYAM PTGS: " + StaticAnalyser.ptgs);
-            // System.out.println("PRIYAM calliePTG: " + calliePTG);
+            System.out.println("PRIYAM METHOD: " + method);
+            System.out.println("PRIYAM PTGS: " + StaticAnalyser.ptgs);
+            System.out.println("PRIYAM calliePTG: " + calliePTG);
             // If ptg gives error, ensure StaticAnalysis has been done
 
             for (int i = 0; i < paramCount; i++) {
@@ -163,8 +171,13 @@ public class StackOrderAnalyser extends BodyTransformer {
                 for (Map.Entry<SootField, Set<ObjectNode>> entry : pointingTo.entrySet()) {
                     for (ObjectNode fieldObj : entry.getValue()) {
                         System.out.println("There exists an edge from: " + obj + " to " + fieldObj + " by " + entry.getKey());
-                        if (fieldObj.type == ObjectType.parameter) {
+                        if (fieldObj.type != ObjectType.parameter) {
                             continue;                            
+                        }
+
+                        if (!paramMapping.containsKey(obj) || !paramMapping.containsKey(fieldObj)) {
+                            // If paramsMapping does not have the object, it can happen if null is passed
+                            continue;
                         }
 
                         // Find paramsMapping for obj
@@ -172,13 +185,15 @@ public class StackOrderAnalyser extends BodyTransformer {
                         // Add an edge from objs to fieldObjs
                         for (ObjectNode objInCaller : paramMapping.get(obj)) {
                             for (ObjectNode fieldObjInCaller : paramMapping.get(fieldObj)) {
-                                // System.out.println("There should exists an edge from: " + objInCaller + " to " + fieldObjInCaller + " by " + entry.getKey());
+                                System.out.println("There should exists an edge from: " + objInCaller + " to " + fieldObjInCaller + " by " + entry.getKey());
                                 ptg.WEAK_makeField(objInCaller, entry.getKey(), fieldObjInCaller);
                             }
                         }
                     }
                 }
             }
+
+            System.out.println("AFTER PRIYAM PTGS: " + StaticAnalyser.ptgs + "\n");
         }
     }
 }
