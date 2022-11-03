@@ -19,17 +19,22 @@ import java.util.*;
 import java.util.Map.Entry;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Collections;
 
 import java.util.regex.*;
 
 
 public class StaticAnalyser extends BodyTransformer {
-	private boolean allNonEscaping;
+	private static boolean allNonEscaping;
 	public static Map<SootMethod, PointsToGraph> ptgs;
 	public static Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
 	public static Map<SootMethod, ArrayList<ObjectNode>> stackOrders;
 	public static LinkedHashMap<Body, Analysis> analysis;
 	public static List<SootMethod> noBCIMethods; 
+
+	public static Set<SootMethod> methodsProcessed;
+    public static Set<SootMethod> methodsProcessing;
+
 	String[] ignoreFuncs = {
 							// "<java.util.ArrayPrefixHelpers$CumulateTask: compute()V>",
 							// "<java.util.ArrayPrefixHelpers$DoubleCumulateTask: compute()V>",
@@ -78,6 +83,9 @@ public class StaticAnalyser extends BodyTransformer {
 		stackOrders = new ConcurrentHashMap<>();
 		noBCIMethods = new ArrayList<>();
 		allNonEscaping = false;
+
+        methodsProcessed = Collections.synchronizedSet(new HashSet<SootMethod>());
+        methodsProcessing = Collections.synchronizedSet(new HashSet<SootMethod>());
 	}
 
 	private int getSummarySize(HashMap<ObjectNode, EscapeStatus> summary)
@@ -87,6 +95,10 @@ public class StaticAnalyser extends BodyTransformer {
 
 	@Override
 	protected void internalTransform(Body body, String phasename, Map<String, String> options) {
+		processMethod(body);
+	}
+
+	public static void processMethod(Body body) {
 		// if (body.getMethod().getBytecodeSignature().toString()
 		// 	.compareTo("<java.util.HashMap$TreeNode: treeify([Ljava/util/HashMap$Node;)V>") != 0)
 		// {
@@ -95,9 +107,24 @@ public class StaticAnalyser extends BodyTransformer {
 		// if ( !this.sArrays.contains(body.getMethod().getBytecodeSignature()))
 		// 	return;
 
+		SootMethod methodCaller = body.getMethod();
 		if (body.getMethod().isJavaLibraryMethod()) {
 			return;
 		}
+
+        if (methodsProcessed.contains(methodCaller)) {
+            // Method already computed
+            // we have the results ready
+            return;
+        }
+
+        if (methodsProcessing.contains(methodCaller)) {
+            // Recursive loop
+            // ASK - See what to do
+            return;
+        }
+
+        methodsProcessing.add(methodCaller);
 
 		// System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 //		if(body.getMethod().getName().contains("<clinit>")){
@@ -302,10 +329,15 @@ public class StaticAnalyser extends BodyTransformer {
 			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, ptg);
 		}
 		summaries.put(body.getMethod(), summary);
+		allNonEscaping = false; // PRIYAM,reset the static allNonEscaping value
 		System.out.println("Static Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
+
+		// RPIYAM, method finished
+		methodsProcessing.remove(methodCaller);
+        methodsProcessed.add(methodCaller);
 	}
 
-	private void markAsEscaping(List<Local> nativeList, Map<ObjectNode, EscapeStatus> summary, PointsToGraph ptg) {
+	private static void markAsEscaping(List<Local> nativeList, Map<ObjectNode, EscapeStatus> summary, PointsToGraph ptg) {
 		if (nativeList == null) 
 			return;
 		for (Local obj: nativeList) {
@@ -316,14 +348,14 @@ public class StaticAnalyser extends BodyTransformer {
 		}
 	}
 
-	private void markAsNonEscaping(Map<ObjectNode, EscapeStatus> summary) {
+	private static void markAsNonEscaping(Map<ObjectNode, EscapeStatus> summary) {
 		for (ObjectNode obj: summary.keySet()) {
 			EscapeStatus es = new EscapeStatus(NoEscape.getInstance());
 			summary.put(obj, es);
 		}
 	}
 
-	private void setParamsAsEscaping(SootMethod m, Map<ObjectNode, EscapeStatus> summary) {
+	private static void setParamsAsEscaping(SootMethod m, Map<ObjectNode, EscapeStatus> summary) {
 		summary.clear();
 		for (int i=0; i< m.getParameterCount(); i++) {
 			summary.put(new ObjectNode(i, ObjectType.parameter), new EscapeStatus(Escape.getInstance()));
@@ -336,7 +368,7 @@ public class StaticAnalyser extends BodyTransformer {
 	 * changes on.
 	 */
 
-	public void apply(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
+	public static void apply(SootMethod m, Unit u, PointsToGraph ptg, Map<ObjectNode, EscapeStatus> summary) {
 		// System.err.println(u+" "+u.getClass().getName());
 
 		// System.out.println("PRIYAM soot unit " + u);

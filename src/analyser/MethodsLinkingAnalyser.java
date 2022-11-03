@@ -152,7 +152,7 @@ public class MethodsLinkingAnalyser extends SceneTransformer {
                     if (arg.getType() instanceof RefType || arg.getType() instanceof ArrayType)
                         if (!(arg instanceof Constant)) { // Notice the not(!)
                             // ptg.addParametricEdge((Local) args.get(i), cv);
-                            System.out.println("args get i: " + args.get(i));
+                            // System.out.println("args get i: " + args.get(i));
                             paramMapping.put(obj, ptg.vars.get((Local) args.get(i)));
                         }
                 }
