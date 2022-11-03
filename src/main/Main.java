@@ -102,15 +102,15 @@ public class Main {
 
 		// // Problem - not processing methods
 
-		// // First, we add edges created due to callie function during method call
-		// analysis_start = System.currentTimeMillis();
-		// // How to use spark here?
-		// // MethodsLinkingAnalyser methodsLinkingAnalyser = new MethodsLinkingAnalyser();
-		// // PackManager.v().getPack("wjtp").add(new Transform("wjtp.ada", methodsLinkingAnalyser));
+		// First, we add edges created due to callie function during method call
+		analysis_start = System.currentTimeMillis();
+		// How to use spark here?
+		MethodsLinkingAnalyser methodsLinkingAnalyser = new MethodsLinkingAnalyser();
+		PackManager.v().getPack("wjtp").add(new Transform("wjtp.ada", methodsLinkingAnalyser));
 		// StackOrderAnalyser stackOrderAnalyser = new StackOrderAnalyser();
 		// PackManager.v().getPack("jtp").add(new Transform("jtp.order", stackOrderAnalyser));
-		// Scene.v().setEntryPoints(entryPoints);
-		// PackManager.v().runPacks();
+		Scene.v().setEntryPoints(entryPoints);
+		PackManager.v().runPacks();
 
 
 		// Now we are going to find the stack ordering of the non escaping functions

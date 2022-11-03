@@ -42,13 +42,15 @@ public class MethodsLinkingAnalyser extends SceneTransformer {
     protected void internalTransform(String arg0, Map<String, String> arg1) {
         //  Get the call graph, and start processing the methods
         CallGraph cg = Scene.v().getCallGraph();
-        Iterator<MethodOrMethodContext> callerEdges = cg.sourceMethods();
+        SootClass mainClass = Scene.v().getMainClass();
+        SootMethod methodCaller = mainClass.getMethodByName("main");
+        // Iterator<MethodOrMethodContext> callerEdges = cg.sourceMethods();
 
-        while (callerEdges.hasNext()) {
-            SootMethod methodCaller = (SootMethod) callerEdges.next();
-            // System.out.println("PRIYAM method caller: " + methodCaller);
+        // while (callerEdges.hasNext()) {
+        //     SootMethod methodCaller = (SootMethod) callerEdges.next();
+        //     System.out.println("PRIYAM method caller: " + methodCaller);
             processMethod(methodCaller);
-        }
+        // }
     }
 
     private void processMethod(SootMethod methodCaller) {
