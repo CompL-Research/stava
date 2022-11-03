@@ -8,8 +8,21 @@ public class Main {
 		Node C = new Node();
 		Node D = new Node();
 		Node E = new Node();
-		bar(A, B);
-		bar(A, C);
+		// bar(A, B);
+		A.n = B;
+
+		// if I make channges in staticAnalyser?
+
+		Node x = A.n;
+
+		// r10=[<external,52>, <internal, 8>]
+		// Assumption 1
+		// we do replacement of assignment
+		// statements after the whole pass
+		// How to consider for if else branch?
+		// For different branches?
+
+		bar(x, C);
 		bar(D, E);
 		bar(node1, node2);
 	}

@@ -1,5 +1,6 @@
 package main;
 
+import analyser.MethodsLinkingAnalyser;
 import analyser.StackOrderAnalyser;
 import analyser.StaticAnalyser;
 import config.StoreEscape;
@@ -60,7 +61,6 @@ public class Main {
 		}
 
 		StaticAnalyser staticAnalyser = new StaticAnalyser();
-		StackOrderAnalyser stackOrderAnalyser = new StackOrderAnalyser();
 		CHATransform prepass = new CHATransform();
 		PackManager.v().getPack("wjap").add(new Transform("wjap.pre", prepass));
 		PackManager.v().getPack("jtp").add(new Transform("jtp.sample", staticAnalyser));
@@ -98,12 +98,20 @@ public class Main {
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
 		System.out.println("BEFORE InterProcedural Linking");
-		printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
+		// printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
 
-		// First, we add edges created due to callie function during method call
-		analysis_start = System.currentTimeMillis();
-		PackManager.v().getPack("jtp").add(new Transform("jtp.stackOrder", stackOrderAnalyser));
-		PackManager.v().runPacks();
+		// // Problem - not processing methods
+
+		// // First, we add edges created due to callie function during method call
+		// analysis_start = System.currentTimeMillis();
+		// // How to use spark here?
+		// // MethodsLinkingAnalyser methodsLinkingAnalyser = new MethodsLinkingAnalyser();
+		// // PackManager.v().getPack("wjtp").add(new Transform("wjtp.ada", methodsLinkingAnalyser));
+		// StackOrderAnalyser stackOrderAnalyser = new StackOrderAnalyser();
+		// PackManager.v().getPack("jtp").add(new Transform("jtp.order", stackOrderAnalyser));
+		// Scene.v().setEntryPoints(entryPoints);
+		// PackManager.v().runPacks();
+
 
 		// Now we are going to find the stack ordering of the non escaping functions
 		CreateStackOrdering();

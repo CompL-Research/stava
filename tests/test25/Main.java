@@ -19,7 +19,7 @@ public class Main {
 		n1.n = F; // we need to heapify F (address check)
 		F.n = n2; // no heapfication
 
-
+		// Assumption 2
 		// Theory -- If two objects are directly connected
 		// Then only we need stack order, else, we will not be needing any stack order
 	}
