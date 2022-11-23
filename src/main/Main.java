@@ -1,5 +1,7 @@
 package main;
 
+import analyser.MethodsLinkingAnalyser;
+import analyser.StackOrderAnalyser;
 import analyser.StaticAnalyser;
 import config.StoreEscape;
 import es.*;
@@ -27,7 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.*;
 import java.io.*;
-import java.lang.*;
 
 import static utils.KillCallerOnly.kill;
 
@@ -50,7 +51,7 @@ public class Main {
 		}
 	}
 	public static void main(String[] args) {
-
+		// Generating soot args
 		GetSootArgs g = new GetSootArgs();
 		String[] sootArgs = g.get(args);
 		setStoreEscapeOptions(args);
@@ -58,22 +59,17 @@ public class Main {
 			System.out.println("Unable to generate args for soot!");
 			return;
 		}
+
 		StaticAnalyser staticAnalyser = new StaticAnalyser();
 		CHATransform prepass = new CHATransform();
 		PackManager.v().getPack("wjap").add(new Transform("wjap.pre", prepass));
 		PackManager.v().getPack("jtp").add(new Transform("jtp.sample", staticAnalyser));
+
 		long analysis_start = System.currentTimeMillis();
 		Options.v().parse(sootArgs);
 		Scene.v().loadNecessaryClasses();
 		Scene.v().loadDynamicClasses();
 		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
-		// SootClass sc = Scene.v().loadClassAndSupport("java.lang.CharacterData");
-		// System.out.println(sc.getMethods());
-		// Scene.v().forceResolve(sc.getName(), SootClass.BODIES);
-		// SootMethod tobeAdded = sc.getMethodByName("toUpperCaseEx");
-		// System.out.println("Method: "+tobeAdded);
-		// // SootMethod tobeAdded = Scene.v().getMethod("<java.lang.CharacterData: toUpperCaseEx(I)I>");
-		// entryPoints.add(tobeAdded);
 
 		Chain<SootClass> appClasses = Scene.v().getClasses();
 		Iterator<SootClass> appClassItertator = appClasses.iterator();
@@ -92,56 +88,55 @@ public class Main {
 					// System.out.println("SuperClass: "+aclass.getSuperclass());
 				}
 			}
-		// 	aclass = Scene.v().loadClassAndSupport(aclass.getName());
-		// 	aclass = Scene.v().forceResolve(aclass.getName(), SootClass.BODIES);
-		// 	// if (aclass.getName().contains("spec.validity.Digests")) {
-		// 	// 	System.out.println("Aclass spec: "+aclass.getName()+" : "+aclass.getMethodByName("crunch_jars"));
-		// 	// }
-		// 	System.out.println("Aclass: "+aclass.getName()+ " phantom: "+aclass.isPhantomClass()+" app: "+aclass.isApplicationClass()+" Concrete: "+
-		// 		aclass.isConcrete()+" : " + aclass.getMethods());
-		// 	// System.out.println(aclass.getMethods());
-			// entryPoints.addAll(aclass.getMethods());
 		}
-		// System.out.println(entryPoints);
-		// if (true) 
-		// 	return;
-		Scene.v().setEntryPoints(entryPoints);
 
+		Scene.v().setEntryPoints(entryPoints);
 		PackManager.v().runPacks();
-		// soot.Main.main(sootArgs);
+
 		long analysis_end = System.currentTimeMillis();
 		System.out.println("Static Analysis is done!");
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
-		
+		System.out.println("BEFORE InterProcedural Linking");
+		// printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
+
+		// // Problem - not processing methods
+
+		// // First, we add edges created due to callie function during method call
+		// analysis_start = System.currentTimeMillis();
+		// // How to use spark here?
+		// // MethodsLinkingAnalyser methodsLinkingAnalyser = new MethodsLinkingAnalyser();
+		// // PackManager.v().getPack("wjtp").add(new Transform("wjtp.ada", methodsLinkingAnalyser));
+		// StackOrderAnalyser stackOrderAnalyser = new StackOrderAnalyser();
+		// PackManager.v().getPack("jtp").add(new Transform("jtp.order", stackOrderAnalyser));
+		// Scene.v().setEntryPoints(entryPoints);
+		// PackManager.v().runPacks();
+
+
+		// Now we are going to find the stack ordering of the non escaping functions
+		CreateStackOrdering();
+		analysis_end = System.currentTimeMillis();
+		System.out.println("InterProcedural Linking is done!");
+		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
+
 		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
-		// printSummary(staticAnalyser.summaries);
-		// System.err.println(staticAnalyser.ptgs);
-		printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
-		// if (true)
-		// 	return;
-		// printCFG();
+		System.out.println("BEFORE Resolver");
+		printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
 
 		if(useNewResolver) {
-			ReworkedResolver sr = new ReworkedResolver(staticAnalyser.summaries,
-											staticAnalyser.ptgs,
-											staticAnalyser.noBCIMethods);
+			ReworkedResolver sr = new ReworkedResolver(
+				StaticAnalyser.summaries,
+				StaticAnalyser.ptgs,
+				StaticAnalyser.noBCIMethods);
 			long res_end = System.currentTimeMillis();
 			System.out.println("Resolution is done");
 			System.out.println("Time Taken in phase 1:"+(analysis_end-analysis_start)/1000F);
 			System.out.println("Time Taken in phase 2:"+(res_end-res_start)/1000F);
-	
-			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
 			
-			
-			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			
-			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
-	
-			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
-	
-			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+			System.out.println("AFTER Resolver");
+			printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
+			printResForJVM(sr.solvedSummaries, StaticAnalyser.stackOrders, args[2], args[4]);
 		}
 		else {
 			SummaryResolver sr = new SummaryResolver();
@@ -154,13 +149,72 @@ public class Main {
 			
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			// printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
 			
-			printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+			// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
 	
-			saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+			// saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
 	
-			printResForJVM(sr.solvedSummaries, args[2], args[4]);
+			// printResForJVM(sr.solvedSummaries, args[2], args[4]);
+		}
+	}
+
+	/**
+	 * Performs dfs and finds the topological order
+	 * @param node - Starting node of the dfs
+	 * @param ptg - Points to graph
+	 * @param visited - A visited array to have an idea of dfs
+	 * @param topoOrder - The final result of the dfs - Topological Order
+	 */
+	static void topologicalSortDfs(
+		ObjectNode node,
+		PointsToGraph ptg,
+		HashSet<ObjectNode> visited,
+		ArrayList<ObjectNode> topoOrder) {
+			visited.add(node);
+
+			Map<SootField, Set<ObjectNode>> objectNodesMap = ptg.fields.get(node);
+			if (objectNodesMap != null) {
+				for (SootField sootField : objectNodesMap.keySet()) {
+					for (ObjectNode nextObject : objectNodesMap.get(sootField)) {
+						if (!visited.contains(nextObject)) {
+							topologicalSortDfs(nextObject, ptg, visited, topoOrder);
+						}
+					}
+				}
+			}
+
+			topoOrder.add(node);
+		}
+
+	/**
+	 * Create Stack ordering for each ptg in the Static Analyser
+	 */
+	static void CreateStackOrdering() {
+		// We assumed that the PTGs exist in the StaticAnalyser
+		
+		System.out.println("PRIYAM - Starting topological sorting");
+		for(SootMethod method : StaticAnalyser.ptgs.keySet()) {
+			PointsToGraph ptg = StaticAnalyser.ptgs.get(method);
+
+			// TODO - First check if it is a DAG
+			// TO ASK - Peform a check before or combine with the
+			// topological dfs
+			// Perform topological sort for the ptg
+
+			HashSet<ObjectNode> visited = new HashSet<ObjectNode>();
+			ArrayList<ObjectNode> topoOrder = new ArrayList<ObjectNode>();
+
+			for(Set<ObjectNode> objectNodeSet : ptg.vars.values()) {
+				for (ObjectNode object : objectNodeSet) {
+					if (!visited.contains(object)) {
+						// System.out.println("PRIYAM object" + object);
+						topologicalSortDfs(object, ptg, visited, topoOrder);
+					}
+				}
+			}
+
+			StaticAnalyser.stackOrders.put(method, topoOrder);
 		}
 	}
 
@@ -215,8 +269,11 @@ public class Main {
         }
     }
 
-	private static void printAllInfo(Map<SootMethod, PointsToGraph> ptgs,
-									 Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String opDir) {
+	private static void printAllInfo(
+		Map<SootMethod, PointsToGraph> ptgs,
+		Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries,
+		Map<SootMethod, ArrayList<ObjectNode>> stackOrders,
+		String opDir) {
 
 		Path p_opDir = Paths.get(opDir);
 		for (Map.Entry<SootMethod, PointsToGraph> entry : ptgs.entrySet()) {
@@ -229,7 +286,15 @@ public class Main {
 			output.append("PTG:\n");
 			output.append(ptg.toString());
 			output.append("\nSummary\n");
-			output.append(summaries.get(method).toString() + "\n");
+			output.append(summaries.get(method).toString());
+
+			if (stackOrders.containsKey(method)) {
+				output.append("\nStackOrder\n");
+				output.append(stackOrders.get(method).toString() + "\n\n");
+			} else {
+				output.append("\nNo stack Ordering exists for : " + method + "\n\n");
+			}
+
 			try {
 				Files.write(p_opFile, output.toString().getBytes(StandardCharsets.UTF_8),
 						Files.exists(p_opFile) ? StandardOpenOption.APPEND : StandardOpenOption.CREATE);
@@ -240,6 +305,7 @@ public class Main {
 			}
 		}
 	}
+
 	static String transformFuncSignature(String inputString) {
 		StringBuilder finalString = new StringBuilder();
 		for(int i=1;i<inputString.length()-1;i++) {
@@ -253,7 +319,12 @@ public class Main {
 		}
 		return finalString.toString();
 	}
-	static void printResForJVM(Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries, String ipDir, String opDir) {
+
+	static void printResForJVM(
+		Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries,
+		Map<SootMethod, ArrayList<ObjectNode>> stackOrders,
+		String ipDir,
+		String opDir) {
 		// Open File
 		Path p_ipDir = Paths.get(ipDir);
 		Path p_opDir = Paths.get(opDir);
@@ -266,9 +337,10 @@ public class Main {
 			HashMap<ObjectNode, EscapeStatus> summary = entry.getValue();
 			sb.append(transformFuncSignature(method.getBytecodeSignature()));
 			sb.append(" ");
-			sb.append(GetListOfNoEscapeObjects.get(summary));
+			sb.append(GetListOfNoEscapeObjects.get(summary, stackOrders.get(method)));
 			sb.append("\n");
 		}
+
 		try {
 			System.out.println("Trying to write to:" + p_opFile);
 			Files.write(p_opFile, sb.toString().getBytes(StandardCharsets.UTF_8),

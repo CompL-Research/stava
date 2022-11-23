@@ -10,16 +10,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class GetListOfNoEscapeObjects {
-	public static String get(HashMap<ObjectNode, EscapeStatus> summary) {
+	public static String get(
+			HashMap<ObjectNode, EscapeStatus> summary,
+			ArrayList<ObjectNode> stackOrder) {
 		ArrayList<Integer> arr = new ArrayList<>();
-		for (Map.Entry<ObjectNode, EscapeStatus> entry : summary.entrySet()) {
-			ObjectNode obj = entry.getKey();
-			if(obj.type != ObjectType.internal)
+		for (ObjectNode obj : stackOrder) {
+			if (obj.type != ObjectType.internal)
 				continue;
-			EscapeStatus es = entry.getValue();
-			if (es.containsNoEscape()) arr.add(obj.ref);
+			EscapeStatus es = summary.get(obj);
+			if (es.containsNoEscape())
+				arr.add(obj.ref);
 		}
-		Collections.sort(arr);
+
 		String _ret = arr.toString();
 		return _ret;
 	}

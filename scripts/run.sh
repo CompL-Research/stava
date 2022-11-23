@@ -3,8 +3,14 @@
 # Sample script to be used to run the project on non-benchmark code.
 # Set the paths according to your installation. All paths must be full paths.
 # Instructions: ./run.sh ClassName
+
+if [ -z "$1" ]; then
+    echo "No TestCase Number Provided";
+    exit
+fi
+
 # Installed path of Java 8 JDK
-java_install_path="/usr/lib/jvm/java-8-oracle/"
+java_install_path="/usr/lib/jvm/java-8-openjdk-amd64/"
 
 # The soot jar to be used.
 soot_path=`realpath ../soot/sootclasses-trunk-jar-with-dependencies.jar`
@@ -13,10 +19,10 @@ soot_path=`realpath ../soot/sootclasses-trunk-jar-with-dependencies.jar`
 stava_path=`realpath ..`
 
 # The directory to be analysed.
-test_path=`realpath ../tests/test20/`
+test_path=`realpath ../tests/test$1/`
 
 # The directory inside which stava will output the results.
-output_path=`realpath ../out/testcase/`
+output_path=`realpath ../out/testcase$1/`
 
 java_compiler="${java_install_path}/bin/javac"
 java_vm="${java_install_path}/bin/java"
