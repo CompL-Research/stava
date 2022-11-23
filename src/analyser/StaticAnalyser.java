@@ -22,14 +22,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.regex.*;
 
+import data.GlobalAnalysisData;
+
 
 public class StaticAnalyser extends BodyTransformer {
 	private boolean allNonEscaping;
-	public static Map<SootMethod, PointsToGraph> ptgs;
-	public static Map<SootMethod, HashMap<ObjectNode, EscapeStatus>> summaries;
-	public static Map<SootMethod, ArrayList<ObjectNode>> stackOrders;
-	public static LinkedHashMap<Body, Analysis> analysis;
-	public static List<SootMethod> noBCIMethods; 
+
 	String[] ignoreFuncs = {
 							// "<java.util.ArrayPrefixHelpers$CumulateTask: compute()V>",
 							// "<java.util.ArrayPrefixHelpers$DoubleCumulateTask: compute()V>",
@@ -72,11 +70,6 @@ public class StaticAnalyser extends BodyTransformer {
 
 	public StaticAnalyser() {
 		super();
-		analysis = new LinkedHashMap<>();
-		ptgs = new ConcurrentHashMap<>();
-		summaries = new ConcurrentHashMap<>();
-		stackOrders = new ConcurrentHashMap<>();
-		noBCIMethods = new ArrayList<>();
 		allNonEscaping = false;
 	}
 
@@ -98,6 +91,13 @@ public class StaticAnalyser extends BodyTransformer {
 		if (body.getMethod().isJavaLibraryMethod()) {
 			return;
 		}
+
+		if (GlobalAnalysisData.methodsProcessed.contains(body.getMethod())) {
+			System.out.println("PRIYAM ALREADY PROCESSED INTERPROCEDURALLY: " + " : " + body.getMethod() + " : ");
+			return;
+		}
+
+		System.out.println("PRIYAM: " + " : " + body.getMethod() + " : " + GlobalAnalysisData.ptgs);
 
 		// System.out.println("Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 //		if(body.getMethod().getName().contains("<clinit>")){
@@ -228,9 +228,9 @@ public class StaticAnalyser extends BodyTransformer {
 					// if (sz > 10000)
 					// 	return;
 				} catch (IllegalBCIException e) {
-					noBCIMethods.add(body.getMethod());
+					GlobalAnalysisData.noBCIMethods.add(body.getMethod());
 					setParamsAsEscaping(body.getMethod(),summary);
-					summaries.put(body.getMethod(), summary);
+					GlobalAnalysisData.summaries.put(body.getMethod(), summary);
 					String s = "->*** Error at: " + u.toString() + " of " + body.getMethod().getBytecodeSignature();
 					System.err.println(s);
 					System.err.println(e);
@@ -296,12 +296,12 @@ public class StaticAnalyser extends BodyTransformer {
 		Entry<Unit, FlowSet> elem = iterator.next();
 		while (iterator.hasNext()) elem = iterator.next();
 		PointsToGraph ptg = elem.getValue().getOut();
-		ptgs.put(body.getMethod(), ptg);
+		GlobalAnalysisData.ptgs.put(body.getMethod(), ptg);
 		if (allNonEscaping) {
 			markAsNonEscaping(summary);
 			markAsEscaping(JInvokeStmtHandler.nativeLocals.get(body.getMethod()), summary, ptg);
 		}
-		summaries.put(body.getMethod(), summary);
+		GlobalAnalysisData.summaries.put(body.getMethod(), summary);
 		System.out.println("Static Method Name: "+ body.getMethod().getBytecodeSignature() + ":"+body.getMethod().getName());
 	}
 
@@ -365,7 +365,7 @@ public class StaticAnalyser extends BodyTransformer {
 	}
 
 	public void printAnalysis() {
-		for (Map.Entry<Body, Analysis> entry : analysis.entrySet()) {
+		for (Map.Entry<Body, Analysis> entry : GlobalAnalysisData.analysis.entrySet()) {
 			System.out.println("Class: " + entry.getKey().getMethod().getDeclaringClass());
 			System.out.println("Method: " + entry.getKey().getMethod().getName());
 			System.out.println("Analysis:\n" + entry.getValue());

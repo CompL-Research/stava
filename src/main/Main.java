@@ -1,9 +1,9 @@
 package main;
 
 import analyser.MethodsLinkingAnalyser;
-import analyser.StackOrderAnalyser;
 import analyser.StaticAnalyser;
 import config.StoreEscape;
+import data.GlobalAnalysisData;
 import es.*;
 import ptg.ObjectNode;
 import ptg.PointsToGraph;
@@ -60,8 +60,10 @@ public class Main {
 			return;
 		}
 
+		GlobalAnalysisData globalAnlaysisData = new GlobalAnalysisData();
 		StaticAnalyser staticAnalyser = new StaticAnalyser();
 		CHATransform prepass = new CHATransform();
+		MethodsLinkingAnalyser methodsLinkingAnalyser = new MethodsLinkingAnalyser();
 		PackManager.v().getPack("wjap").add(new Transform("wjap.pre", prepass));
 		PackManager.v().getPack("jtp").add(new Transform("jtp.sample", staticAnalyser));
 
@@ -90,7 +92,8 @@ public class Main {
 			}
 		}
 
-		Scene.v().setEntryPoints(entryPoints);
+		// Scene.v().setEntryPoints(entryPoints);
+		// System.out.println("All Packs" + PackManager.v().allPacks());
 		PackManager.v().runPacks();
 
 		long analysis_end = System.currentTimeMillis();
@@ -98,20 +101,19 @@ public class Main {
 		System.out.println("Time Taken:"+(analysis_end-analysis_start)/1000F);
 
 		System.out.println("BEFORE InterProcedural Linking");
-		// printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
+		printAllInfo(GlobalAnalysisData.ptgs, GlobalAnalysisData.summaries, GlobalAnalysisData.stackOrders, args[4]);
 
 		// // Problem - not processing methods
 
 		// First, we add edges created due to callie function during method call
 		analysis_start = System.currentTimeMillis();
 		// How to use spark here?
-		MethodsLinkingAnalyser methodsLinkingAnalyser = new MethodsLinkingAnalyser();
-		PackManager.v().getPack("wjtp").add(new Transform("wjtp.ada", methodsLinkingAnalyser));
 		// StackOrderAnalyser stackOrderAnalyser = new StackOrderAnalyser();
 		// PackManager.v().getPack("jtp").add(new Transform("jtp.order", stackOrderAnalyser));
-		Scene.v().setEntryPoints(entryPoints);
-		PackManager.v().runPacks();
+		// Scene.v().setEntryPoints(entryPoints);
 
+		PackManager.v().getPack("wjtp").add(new Transform("wjtp.lfc", methodsLinkingAnalyser));
+		PackManager.v().runPacks();
 
 		// Now we are going to find the stack ordering of the non escaping functions
 		CreateStackOrdering();
@@ -122,38 +124,38 @@ public class Main {
 		boolean useNewResolver = true;
 		long res_start = System.currentTimeMillis();
 		System.out.println("BEFORE Resolver");
-		printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
+		printAllInfo(GlobalAnalysisData.ptgs, GlobalAnalysisData.summaries, GlobalAnalysisData.stackOrders, args[4]);
 
 		if(useNewResolver) {
 			ReworkedResolver sr = new ReworkedResolver(
-				StaticAnalyser.summaries,
-				StaticAnalyser.ptgs,
-				StaticAnalyser.noBCIMethods);
+				GlobalAnalysisData.summaries,
+				GlobalAnalysisData.ptgs,
+				GlobalAnalysisData.noBCIMethods);
 			long res_end = System.currentTimeMillis();
 			System.out.println("Resolution is done");
 			System.out.println("Time Taken in phase 1:"+(analysis_end-analysis_start)/1000F);
 			System.out.println("Time Taken in phase 2:"+(res_end-res_start)/1000F);
 			
 			System.out.println("AFTER Resolver");
-			printAllInfo(StaticAnalyser.ptgs, StaticAnalyser.summaries, StaticAnalyser.stackOrders, args[4]);
-			printResForJVM(sr.solvedSummaries, StaticAnalyser.stackOrders, args[2], args[4]);
+			printAllInfo(GlobalAnalysisData.ptgs, GlobalAnalysisData.summaries, GlobalAnalysisData.stackOrders, args[4]);
+			printResForJVM(sr.solvedSummaries, GlobalAnalysisData.stackOrders, args[2], args[4]);
 		}
 		else {
 			SummaryResolver sr = new SummaryResolver();
-			sr.resolve(staticAnalyser.summaries, staticAnalyser.ptgs);
+			sr.resolve(GlobalAnalysisData.summaries, GlobalAnalysisData.ptgs);
 			long res_end = System.currentTimeMillis();
 			System.out.println("Resolution is done");
 			System.out.println("Time Taken:"+(res_end-res_start)/1000F);
 	
-			// System.out.println(staticAnalyser.summaries.size()+ " "+staticAnalyser.ptgs.size());
+			// System.out.println(GlobalAnalysisData.summaries.size()+ " "+GlobalAnalysisData.ptgs.size());
 			
 			
 			HashMap<SootMethod, HashMap<ObjectNode, EscapeStatus>> resolved = (HashMap) kill(sr.solvedSummaries);
-			// printAllInfo(StaticAnalyser.ptgs, staticAnalyser.summaries, args[4]);
+			// printAllInfo(GlobalAnalysisData.ptgs, GlobalAnalysisData.summaries, args[4]);
 			
-			// printAllInfo(StaticAnalyser.ptgs, resolved, args[4]);
+			// printAllInfo(GlobalAnalysisData.ptgs, resolved, args[4]);
 	
-			// saveStats(sr.existingSummaries, resolved, args[4], staticAnalyser.ptgs);
+			// saveStats(sr.existingSummaries, resolved, args[4], GlobalAnalysisData.ptgs);
 	
 			// printResForJVM(sr.solvedSummaries, args[2], args[4]);
 		}
@@ -191,11 +193,11 @@ public class Main {
 	 * Create Stack ordering for each ptg in the Static Analyser
 	 */
 	static void CreateStackOrdering() {
-		// We assumed that the PTGs exist in the StaticAnalyser
+		// We assumed that the PTGs exist in the GlobalAnalysisData
 		
 		System.out.println("PRIYAM - Starting topological sorting");
-		for(SootMethod method : StaticAnalyser.ptgs.keySet()) {
-			PointsToGraph ptg = StaticAnalyser.ptgs.get(method);
+		for(SootMethod method : GlobalAnalysisData.ptgs.keySet()) {
+			PointsToGraph ptg = GlobalAnalysisData.ptgs.get(method);
 
 			// TODO - First check if it is a DAG
 			// TO ASK - Peform a check before or combine with the
@@ -214,7 +216,7 @@ public class Main {
 				}
 			}
 
-			StaticAnalyser.stackOrders.put(method, topoOrder);
+			GlobalAnalysisData.stackOrders.put(method, topoOrder);
 		}
 	}
 
